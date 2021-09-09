@@ -1,4 +1,4 @@
-module github.com/sunshineplan/utils/database/sqlite
+module github.com/sunshineplan/database/sqlite
 
 go 1.16
 

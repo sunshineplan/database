@@ -1,4 +1,4 @@
-module github.com/sunshineplan/utils/database/mongodb
+module github.com/sunshineplan/database/mongodb
 
 go 1.16
 

@@ -1,4 +1,4 @@
-module github.com/sunshineplan/utils/database/mysql
+module github.com/sunshineplan/database/mysql
 
 go 1.16
 
