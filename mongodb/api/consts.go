@@ -2,8 +2,11 @@ package api
 
 import "errors"
 
-var ErrNilDocument = errors.New("document is nil")
-var ErrNoDocuments = errors.New("mongo: no documents in result")
+var (
+	ErrNilDocument = errors.New("document is nil")
+	ErrNoDocuments = errors.New("mongo: no documents in result")
+	ErrDecodeToNil = errors.New("cannot Decode to nil value")
+)
 
 const base = "https://data.mongodb-api.com/app/%s/endpoint/data/beta"
 
