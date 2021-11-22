@@ -8,6 +8,15 @@ import (
 	"net/http"
 )
 
+var defaultHTTPClient = http.DefaultClient
+
+func DefaultHTTPClient(client *http.Client) {
+	if client == nil {
+		panic("client is nil")
+	}
+	defaultHTTPClient = client
+}
+
 type Client struct {
 	DataSource string
 	Database   string
@@ -67,7 +76,7 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("api-key", c.Key)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := defaultHTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
