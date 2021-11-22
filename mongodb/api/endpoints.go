@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 )
 
-type FindOneOpt struct {
-	Filter     interface{} `json:"filter,omitempty"`
-	Projection interface{} `json:"projection,omitempty"`
-}
+func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) error {
+	option := findOneOpt{Filter: filter}
+	if opt != nil {
+		option.Projection = opt.Projection
+	}
 
-func (c *Client) FindOne(opt FindOneOpt, data interface{}) (err error) {
 	var res document
-	if err = c.Request(findOne, opt, &res); err != nil {
-		return
+	if err := c.Request(findOne, option, &res); err != nil {
+		return err
 	}
 	if res.Document == nil {
 		return ErrNoDocuments
@@ -21,18 +21,18 @@ func (c *Client) FindOne(opt FindOneOpt, data interface{}) (err error) {
 	return json.Unmarshal(b, data)
 }
 
-type FindOpt struct {
-	Filter     interface{} `json:"filter,omitempty"`
-	Projection interface{} `json:"projection,omitempty"`
-	Sort       interface{} `json:"sort,omitempty"`
-	Limit      int         `json:"limit,omitempty"`
-	Skip       int         `json:"skip,omitempty"`
-}
+func (c *Client) Find(filter interface{}, opt *FindOpt, data interface{}) error {
+	option := findOpt{Filter: filter}
+	if opt != nil {
+		option.Projection = opt.Projection
+		option.Sort = opt.Sort
+		option.Limit = opt.Limit
+		option.Skip = opt.Skip
+	}
 
-func (c *Client) Find(opt FindOpt, data interface{}) (err error) {
 	var res documents
-	if err = c.Request(find, opt, &res); err != nil {
-		return
+	if err := c.Request(find, option, &res); err != nil {
+		return err
 	}
 	b, _ := json.Marshal(res.Documents)
 	return json.Unmarshal(b, data)
@@ -59,69 +59,67 @@ func (c *Client) InsertMany(docs interface{}) (ids []string, err error) {
 	return
 }
 
-type UpdateOpt struct {
-	Filter interface{} `json:"filter,omitempty"`
-	Update interface{} `json:"update,omitempty"`
-	Upsert bool        `json:"upsert,omitempty"`
-}
+func (c *Client) UpdateOne(filter interface{}, opt *UpdateOpt) (res Result, err error) {
+	option := updateOpt{Filter: filter}
+	if opt != nil {
+		option.Update = opt.Update
+		option.Upsert = opt.Upsert
+	}
 
-func (c *Client) UpdateOne(opt UpdateOpt) (res Result, err error) {
-	if err = c.Request(updateOne, opt, &res); err != nil {
+	if err = c.Request(updateOne, option, &res); err != nil {
 		return
 	}
 	return
 }
 
-func (c *Client) UpdateMany(opt UpdateOpt) (res Result, err error) {
-	if err = c.Request(updateMany, opt, &res); err != nil {
+func (c *Client) UpdateMany(filter interface{}, opt *UpdateOpt) (res Result, err error) {
+	option := updateOpt{Filter: filter}
+	if opt != nil {
+		option.Update = opt.Update
+		option.Upsert = opt.Upsert
+	}
+
+	if err = c.Request(updateMany, option, &res); err != nil {
 		return
 	}
 	return
 }
 
-type ReplaceOneOpt struct {
-	Filter      interface{} `json:"filter,omitempty"`
-	Replacement interface{} `json:"replacement,omitempty"`
-	Upsert      bool        `json:"upsert,omitempty"`
-}
+func (c *Client) ReplaceOne(filter interface{}, opt *ReplaceOneOpt, data interface{}) (res Result, err error) {
+	option := replaceOneOpt{Filter: filter}
+	if opt != nil {
+		option.Replacement = opt.Replacement
+		option.Upsert = opt.Upsert
+	}
 
-func (c *Client) ReplaceOne(opt ReplaceOneOpt, data interface{}) (res Result, err error) {
-	if err = c.Request(replaceOne, opt, &res); err != nil {
+	if err = c.Request(replaceOne, option, &res); err != nil {
 		return
 	}
 	return
 }
 
-type DeleteOpt struct {
-	Filter interface{} `json:"filter,omitempty"`
-}
-
-func (c *Client) DeleteOne(opt DeleteOpt) (count int, err error) {
+func (c *Client) DeleteOne(filter interface{}) (count int, err error) {
 	var res deletedCount
-	if err = c.Request(deleteOne, opt, &res); err != nil {
+	if err = c.Request(deleteOne, deleteOpt{filter}, &res); err != nil {
 		return
 	}
 	count = res.DeletedCount
 	return
 }
 
-func (c *Client) DeleteMany(opt DeleteOpt) (count int, err error) {
+func (c *Client) DeleteMany(filter interface{}) (count int, err error) {
 	var res deletedCount
-	if err = c.Request(deleteMany, opt, &res); err != nil {
+	if err = c.Request(deleteMany, deleteOpt{filter}, &res); err != nil {
 		return
 	}
 	count = res.DeletedCount
 	return
 }
 
-type AggregateOpt struct {
-	Pipeline interface{} `json:"pipeline,omitempty"`
-}
-
-func (c *Client) Aggregate(opt AggregateOpt, data interface{}) (err error) {
+func (c *Client) Aggregate(pipeline, data interface{}) error {
 	var res documents
-	if err = c.Request(aggregate, opt, &res); err != nil {
-		return
+	if err := c.Request(aggregate, aggregateOpt{pipeline}, &res); err != nil {
+		return err
 	}
 	b, _ := json.Marshal(res.Documents)
 	return json.Unmarshal(b, data)
