@@ -42,6 +42,10 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 		return fmt.Errorf("api key is required")
 	}
 
+	if data == nil {
+		return ErrDecodeToNil
+	}
+
 	m := c.auth()
 	b, err := json.Marshal(action)
 	if err != nil {

@@ -8,9 +8,6 @@ func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) 
 	if filter == nil {
 		return ErrNilDocument
 	}
-	if data == nil {
-		return ErrDecodeToNil
-	}
 
 	option := findOneOpt{Filter: filter}
 	if opt != nil {
@@ -31,9 +28,6 @@ func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) 
 func (c *Client) Find(filter interface{}, opt *FindOpt, data interface{}) error {
 	if filter == nil {
 		return ErrNilDocument
-	}
-	if data == nil {
-		return ErrDecodeToNil
 	}
 
 	option := findOpt{Filter: filter}
@@ -159,9 +153,6 @@ func (c *Client) DeleteMany(filter interface{}) (count int, err error) {
 func (c *Client) Aggregate(pipeline, data interface{}) error {
 	if pipeline == nil {
 		return ErrNilDocument
-	}
-	if data == nil {
-		return ErrDecodeToNil
 	}
 
 	var res documents
