@@ -1,6 +1,7 @@
 package api
 
 type M map[string]interface{}
+type Document M
 
 type (
 	document struct {

@@ -1,6 +1,9 @@
 package api
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"unsafe"
+)
 
 type FindOneOpt struct {
 	Filter     M `json:"filter,omitempty"`
@@ -33,22 +36,18 @@ func (c *Client) Find(opt FindOpt, data interface{}) (err error) {
 	return json.Unmarshal(b, data)
 }
 
-type InsertOneOpt document
-
-func (c *Client) InsertOne(opt InsertOneOpt) (id string, err error) {
+func (c *Client) InsertOne(doc Document) (id string, err error) {
 	var res insertedId
-	if err = c.Request(insertOne, opt, &res); err != nil {
+	if err = c.Request(insertOne, document{M(doc)}, &res); err != nil {
 		return
 	}
 	id = res.InsertedId
 	return
 }
 
-type InsertManyOpt documents
-
-func (c *Client) InsertMany(opt InsertManyOpt) (ids []string, err error) {
+func (c *Client) InsertMany(docs []Document) (ids []string, err error) {
 	var res insertedIds
-	if err = c.Request(insertMany, opt, &res); err != nil {
+	if err = c.Request(insertMany, documents{*(*[]M)(unsafe.Pointer(&docs))}, &res); err != nil {
 		return
 	}
 	ids = res.InsertedIds
