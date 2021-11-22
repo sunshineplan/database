@@ -11,7 +11,7 @@ type (
 	}
 	insertedId   struct{ InsertedId string }
 	insertedIds  struct{ InsertedIds []string }
-	deletedCount struct{ DeletedCount int }
+	deletedCount struct{ DeletedCount int64 }
 )
 
 type (
@@ -27,14 +27,14 @@ type (
 		Filter     interface{} `json:"filter,omitempty"`
 		Projection interface{} `json:"projection,omitempty"`
 		Sort       interface{} `json:"sort,omitempty"`
-		Limit      int         `json:"limit,omitempty"`
-		Skip       int         `json:"skip,omitempty"`
+		Limit      int64       `json:"limit,omitempty"`
+		Skip       int64       `json:"skip,omitempty"`
 	}
 	FindOpt struct {
 		Projection interface{}
 		Sort       interface{}
-		Limit      int
-		Skip       int
+		Limit      int64
+		Skip       int64
 	}
 
 	updateOpt struct {
@@ -59,10 +59,15 @@ type (
 	aggregateOpt struct {
 		Pipeline interface{} `json:"pipeline,omitempty"`
 	}
+
+	CountOpt struct {
+		Limit int64
+		Skip  int64
+	}
 )
 
 type Result struct {
-	MatchedCount  int
-	ModifiedCount int
+	MatchedCount  int64
+	ModifiedCount int64
 	UpsertedId    string
 }

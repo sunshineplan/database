@@ -5,10 +5,6 @@ import (
 )
 
 func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) error {
-	if filter == nil {
-		return ErrNilDocument
-	}
-
 	option := findOneOpt{Filter: filter}
 	if opt != nil {
 		option.Projection = opt.Projection
@@ -26,10 +22,6 @@ func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) 
 }
 
 func (c *Client) Find(filter interface{}, opt *FindOpt, data interface{}) error {
-	if filter == nil {
-		return ErrNilDocument
-	}
-
 	option := findOpt{Filter: filter}
 	if opt != nil {
 		option.Projection = opt.Projection
@@ -122,7 +114,7 @@ func (c *Client) ReplaceOne(filter, replacement interface{}, opt *UpdateOpt) (re
 	return
 }
 
-func (c *Client) DeleteOne(filter interface{}) (count int, err error) {
+func (c *Client) DeleteOne(filter interface{}) (count int64, err error) {
 	if filter == nil {
 		err = ErrNilDocument
 		return
@@ -136,7 +128,7 @@ func (c *Client) DeleteOne(filter interface{}) (count int, err error) {
 	return
 }
 
-func (c *Client) DeleteMany(filter interface{}) (count int, err error) {
+func (c *Client) DeleteMany(filter interface{}) (count int64, err error) {
 	if filter == nil {
 		err = ErrNilDocument
 		return
@@ -161,4 +153,68 @@ func (c *Client) Aggregate(pipeline, data interface{}) error {
 	}
 	b, _ := json.Marshal(res.Documents)
 	return json.Unmarshal(b, data)
+}
+
+func (c *Client) CountDocuments(filter interface{}, opt *CountOpt) (n int64, err error) {
+	if filter == nil {
+		err = ErrNilDocument
+		return
+	}
+
+	var skip, limit int64
+	if opt != nil {
+		skip = opt.Skip
+		limit = opt.Limit
+	}
+
+	var res struct{ N int64 }
+	if err = c.Aggregate([]M{
+		{"$match": filter},
+		{"$skip": skip},
+		{"$limit": limit},
+		{"$group": M{"_id": nil, "n": M{"$sum": 1}}},
+	}, &res); err != nil {
+		return
+	}
+	n = res.N
+	return
+}
+
+func (c *Client) FindOneAndDelete(filter interface{}, opt *FindOneOpt, data interface{}) (err error) {
+	if filter == nil {
+		return ErrNilDocument
+	}
+
+	if err = c.FindOne(filter, opt, &data); err != nil {
+		return
+	}
+
+	_, err = c.DeleteOne(filter)
+	return
+}
+
+func (c *Client) FindOneAndReplace(filter, replacement interface{}, opt *FindOneOpt, data interface{}) (err error) {
+	if filter == nil || replacement == nil {
+		return ErrNilDocument
+	}
+
+	if err = c.FindOne(filter, opt, &data); err != nil {
+		return
+	}
+
+	_, err = c.ReplaceOne(filter, replacement, nil)
+	return
+}
+
+func (c *Client) FindOneAndUpdate(filter, update interface{}, opt *FindOneOpt, data interface{}) (err error) {
+	if filter == nil || update == nil {
+		return ErrNilDocument
+	}
+
+	if err = c.FindOne(filter, opt, &data); err != nil {
+		return
+	}
+
+	_, err = c.UpdateOne(filter, update, nil)
+	return
 }
