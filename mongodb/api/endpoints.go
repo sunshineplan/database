@@ -5,6 +5,10 @@ import (
 )
 
 func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) error {
+	if filter == nil {
+		return ErrNilDocument
+	}
+
 	option := findOneOpt{Filter: filter}
 	if opt != nil {
 		option.Projection = opt.Projection
@@ -22,6 +26,10 @@ func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) 
 }
 
 func (c *Client) Find(filter interface{}, opt *FindOpt, data interface{}) error {
+	if filter == nil {
+		return ErrNilDocument
+	}
+
 	option := findOpt{Filter: filter}
 	if opt != nil {
 		option.Projection = opt.Projection
@@ -51,6 +59,10 @@ func (c *Client) InsertOne(doc interface{}) (id string, err error) {
 }
 
 func (c *Client) InsertMany(docs interface{}) (ids []string, err error) {
+	if docs == nil {
+		return nil, ErrNilDocument
+	}
+
 	var res insertedIds
 	if err = c.Request(insertMany, documents{docs}, &res); err != nil {
 		return
@@ -59,10 +71,14 @@ func (c *Client) InsertMany(docs interface{}) (ids []string, err error) {
 	return
 }
 
-func (c *Client) UpdateOne(filter interface{}, opt *UpdateOpt) (res Result, err error) {
-	option := updateOpt{Filter: filter}
+func (c *Client) UpdateOne(filter, update interface{}, opt *UpdateOpt) (res Result, err error) {
+	if filter == nil || update == nil {
+		err = ErrNilDocument
+		return
+	}
+
+	option := updateOpt{Filter: filter, Update: update}
 	if opt != nil {
-		option.Update = opt.Update
 		option.Upsert = opt.Upsert
 	}
 
@@ -72,10 +88,14 @@ func (c *Client) UpdateOne(filter interface{}, opt *UpdateOpt) (res Result, err 
 	return
 }
 
-func (c *Client) UpdateMany(filter interface{}, opt *UpdateOpt) (res Result, err error) {
-	option := updateOpt{Filter: filter}
+func (c *Client) UpdateMany(filter, update interface{}, opt *UpdateOpt) (res Result, err error) {
+	if filter == nil || update == nil {
+		err = ErrNilDocument
+		return
+	}
+
+	option := updateOpt{Filter: filter, Update: update}
 	if opt != nil {
-		option.Update = opt.Update
 		option.Upsert = opt.Upsert
 	}
 
@@ -85,10 +105,14 @@ func (c *Client) UpdateMany(filter interface{}, opt *UpdateOpt) (res Result, err
 	return
 }
 
-func (c *Client) ReplaceOne(filter interface{}, opt *ReplaceOneOpt, data interface{}) (res Result, err error) {
-	option := replaceOneOpt{Filter: filter}
+func (c *Client) ReplaceOne(filter, replacement interface{}, opt *UpdateOpt) (res Result, err error) {
+	if filter == nil || replacement == nil {
+		err = ErrNilDocument
+		return
+	}
+
+	option := replaceOneOpt{Filter: filter, Replacement: replacement}
 	if opt != nil {
-		option.Replacement = opt.Replacement
 		option.Upsert = opt.Upsert
 	}
 
@@ -99,6 +123,11 @@ func (c *Client) ReplaceOne(filter interface{}, opt *ReplaceOneOpt, data interfa
 }
 
 func (c *Client) DeleteOne(filter interface{}) (count int, err error) {
+	if filter == nil {
+		err = ErrNilDocument
+		return
+	}
+
 	var res deletedCount
 	if err = c.Request(deleteOne, deleteOpt{filter}, &res); err != nil {
 		return
@@ -108,6 +137,11 @@ func (c *Client) DeleteOne(filter interface{}) (count int, err error) {
 }
 
 func (c *Client) DeleteMany(filter interface{}) (count int, err error) {
+	if filter == nil {
+		err = ErrNilDocument
+		return
+	}
+
 	var res deletedCount
 	if err = c.Request(deleteMany, deleteOpt{filter}, &res); err != nil {
 		return
@@ -117,6 +151,10 @@ func (c *Client) DeleteMany(filter interface{}) (count int, err error) {
 }
 
 func (c *Client) Aggregate(pipeline, data interface{}) error {
+	if pipeline == nil {
+		return ErrNilDocument
+	}
+
 	var res documents
 	if err := c.Request(aggregate, aggregateOpt{pipeline}, &res); err != nil {
 		return err

@@ -43,7 +43,6 @@ type (
 		Upsert bool        `json:"upsert,omitempty"`
 	}
 	UpdateOpt struct {
-		Update interface{}
 		Upsert bool
 	}
 
@@ -51,10 +50,6 @@ type (
 		Filter      interface{} `json:"filter,omitempty"`
 		Replacement interface{} `json:"replacement,omitempty"`
 		Upsert      bool        `json:"upsert,omitempty"`
-	}
-	ReplaceOneOpt struct {
-		Replacement interface{}
-		Upsert      bool
 	}
 
 	deleteOpt struct {
