@@ -2,12 +2,11 @@ package api
 
 import (
 	"encoding/json"
-	"unsafe"
 )
 
 type FindOneOpt struct {
-	Filter     M `json:"filter,omitempty"`
-	Projection M `json:"projection,omitempty"`
+	Filter     interface{} `json:"filter,omitempty"`
+	Projection interface{} `json:"projection,omitempty"`
 }
 
 func (c *Client) FindOne(opt FindOneOpt, data interface{}) (err error) {
@@ -15,16 +14,19 @@ func (c *Client) FindOne(opt FindOneOpt, data interface{}) (err error) {
 	if err = c.Request(findOne, opt, &res); err != nil {
 		return
 	}
+	if res.Document == nil {
+		return ErrNoDocuments
+	}
 	b, _ := json.Marshal(res.Document)
 	return json.Unmarshal(b, data)
 }
 
 type FindOpt struct {
-	Filter     M   `json:"filter,omitempty"`
-	Projection M   `json:"projection,omitempty"`
-	Sort       M   `json:"sort,omitempty"`
-	Limit      int `json:"limit,omitempty"`
-	Skip       int `json:"skip,omitempty"`
+	Filter     interface{} `json:"filter,omitempty"`
+	Projection interface{} `json:"projection,omitempty"`
+	Sort       interface{} `json:"sort,omitempty"`
+	Limit      int         `json:"limit,omitempty"`
+	Skip       int         `json:"skip,omitempty"`
 }
 
 func (c *Client) Find(opt FindOpt, data interface{}) (err error) {
@@ -36,18 +38,21 @@ func (c *Client) Find(opt FindOpt, data interface{}) (err error) {
 	return json.Unmarshal(b, data)
 }
 
-func (c *Client) InsertOne(doc Document) (id string, err error) {
+func (c *Client) InsertOne(doc interface{}) (id string, err error) {
+	if doc == nil {
+		return "", ErrNilDocument
+	}
 	var res insertedId
-	if err = c.Request(insertOne, document{M(doc)}, &res); err != nil {
+	if err = c.Request(insertOne, document{doc}, &res); err != nil {
 		return
 	}
 	id = res.InsertedId
 	return
 }
 
-func (c *Client) InsertMany(docs []Document) (ids []string, err error) {
+func (c *Client) InsertMany(docs interface{}) (ids []string, err error) {
 	var res insertedIds
-	if err = c.Request(insertMany, documents{*(*[]M)(unsafe.Pointer(&docs))}, &res); err != nil {
+	if err = c.Request(insertMany, documents{docs}, &res); err != nil {
 		return
 	}
 	ids = res.InsertedIds
@@ -55,9 +60,9 @@ func (c *Client) InsertMany(docs []Document) (ids []string, err error) {
 }
 
 type UpdateOpt struct {
-	Filter M    `json:"filter,omitempty"`
-	Update M    `json:"update,omitempty"`
-	Upsert bool `json:"upsert,omitempty"`
+	Filter interface{} `json:"filter,omitempty"`
+	Update interface{} `json:"update,omitempty"`
+	Upsert bool        `json:"upsert,omitempty"`
 }
 
 func (c *Client) UpdateOne(opt UpdateOpt) (res Result, err error) {
@@ -75,9 +80,9 @@ func (c *Client) UpdateMany(opt UpdateOpt) (res Result, err error) {
 }
 
 type ReplaceOneOpt struct {
-	Filter      M    `json:"filter,omitempty"`
-	Replacement M    `json:"replacement,omitempty"`
-	Upsert      bool `json:"upsert,omitempty"`
+	Filter      interface{} `json:"filter,omitempty"`
+	Replacement interface{} `json:"replacement,omitempty"`
+	Upsert      bool        `json:"upsert,omitempty"`
 }
 
 func (c *Client) ReplaceOne(opt ReplaceOneOpt, data interface{}) (res Result, err error) {
@@ -88,7 +93,7 @@ func (c *Client) ReplaceOne(opt ReplaceOneOpt, data interface{}) (res Result, er
 }
 
 type DeleteOpt struct {
-	Filter M `json:"filter,omitempty"`
+	Filter interface{} `json:"filter,omitempty"`
 }
 
 func (c *Client) DeleteOne(opt DeleteOpt) (count int, err error) {
@@ -110,7 +115,7 @@ func (c *Client) DeleteMany(opt DeleteOpt) (count int, err error) {
 }
 
 type AggregateOpt struct {
-	Pipeline []M `json:"pipeline,omitempty"`
+	Pipeline interface{} `json:"pipeline,omitempty"`
 }
 
 func (c *Client) Aggregate(opt AggregateOpt, data interface{}) (err error) {

@@ -1,5 +1,10 @@
 package api
 
+import "errors"
+
+var ErrNilDocument = errors.New("document is nil")
+var ErrNoDocuments = errors.New("mongo: no documents in result")
+
 const base = "https://data.mongodb-api.com/app/%s/endpoint/data/beta"
 
 const (

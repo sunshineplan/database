@@ -1,14 +1,13 @@
 package api
 
 type M map[string]interface{}
-type Document M
 
 type (
 	document struct {
-		Document M `json:"document"`
+		Document interface{} `json:"document"`
 	}
 	documents struct {
-		Documents []M `json:"documents"`
+		Documents interface{} `json:"documents"`
 	}
 	insertedId   struct{ InsertedId string }
 	insertedIds  struct{ InsertedIds []string }
