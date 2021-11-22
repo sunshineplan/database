@@ -9,11 +9,23 @@ import (
 )
 
 type Client struct {
-	DataSource string `json:"dataSource"`
-	Database   string `json:"database"`
-	Collection string `json:"collection"`
-	AppID      string `json:"-"`
-	Key        string `json:"-"`
+	DataSource string
+	Database   string
+	Collection string
+	AppID      string
+	Key        string
+}
+
+func (c *Client) auth() (m M) {
+	b, _ := json.Marshal(
+		struct {
+			DataSource string `json:"dataSource"`
+			Database   string `json:"database"`
+			Collection string `json:"collection"`
+		}{c.DataSource, c.Database, c.Collection},
+	)
+	json.Unmarshal(b, &m)
+	return
 }
 
 func (c *Client) Request(endpoint string, action, data interface{}) error {
@@ -30,15 +42,15 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 		return fmt.Errorf("api key is required")
 	}
 
-	var body M
+	m := c.auth()
 	b, err := json.Marshal(action)
 	if err != nil {
 		return err
 	}
-	json.Unmarshal(b, &body)
-	b, _ = json.Marshal(c)
-	json.Unmarshal(b, &body)
-	b, _ = json.Marshal(body)
+	if err = json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+	b, _ = json.Marshal(m)
 
 	req, err := http.NewRequest(
 		"POST",
