@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -22,6 +23,6 @@ func isValidObjectID(s string) bool {
 	return err == nil
 }
 
-func Date(date time.Time) map[string]map[string]int64 {
-	return map[string]map[string]int64{"$date": {"$numberLong": date.UnixMilli()}}
+func Date(date time.Time) map[string]map[string]string {
+	return map[string]map[string]string{"$date": {"$numberLong": strconv.FormatInt(date.UnixMilli(), 10)}}
 }
