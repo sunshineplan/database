@@ -91,7 +91,7 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 		return fmt.Errorf("the request was sent to an endpoint that does not exist")
 	case 500:
 		return fmt.Errorf("the Data API encountered an internal error and could not complete the request")
-	case 200:
+	case 200, 201:
 
 	default:
 		return fmt.Errorf("unknown status code: %d", resp.StatusCode)
