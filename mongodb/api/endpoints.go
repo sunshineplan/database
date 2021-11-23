@@ -157,26 +157,28 @@ func (c *Client) Aggregate(pipeline, data interface{}) error {
 
 func (c *Client) CountDocuments(filter interface{}, opt *CountOpt) (n int64, err error) {
 	if filter == nil {
-		err = ErrNilDocument
-		return
+		filter = M{}
 	}
 
-	var skip, limit int64
+	pipeline := []M{{"$match": filter}}
 	if opt != nil {
-		skip = opt.Skip
-		limit = opt.Limit
+		pipeline = append(pipeline, M{"$skip": opt.Skip})
+		if opt.Limit != 0 {
+			pipeline = append(pipeline, M{"$limit": opt.Limit})
+		}
 	}
+	pipeline = append(pipeline, M{"$group": M{"_id": nil, "n": M{"$sum": 1}}})
 
-	var res struct{ N int64 }
-	if err = c.Aggregate([]M{
-		{"$match": filter},
-		{"$skip": skip},
-		{"$limit": limit},
-		{"$group": M{"_id": nil, "n": M{"$sum": 1}}},
-	}, &res); err != nil {
+	var res []struct{ N int64 }
+	if err = c.Aggregate(pipeline, &res); err != nil {
 		return
 	}
-	n = res.N
+
+	if len(res) == 0 {
+		n = 0
+	} else {
+		n = res[0].N
+	}
 	return
 }
 
