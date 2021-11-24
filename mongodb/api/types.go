@@ -4,10 +4,10 @@ type M map[string]interface{}
 
 type (
 	document struct {
-		Document interface{} `json:"document"`
+		Document interface{}
 	}
 	documents struct {
-		Documents interface{} `json:"documents"`
+		Documents interface{}
 	}
 	insertedId   struct{ InsertedId string }
 	insertedIds  struct{ InsertedIds []string }
@@ -16,19 +16,19 @@ type (
 
 type (
 	findOneOpt struct {
-		Filter     interface{} `json:"filter,omitempty"`
-		Projection interface{} `json:"projection,omitempty"`
+		Filter     interface{}
+		Projection interface{}
 	}
 	FindOneOpt struct {
 		Projection interface{}
 	}
 
 	findOpt struct {
-		Filter     interface{} `json:"filter,omitempty"`
-		Projection interface{} `json:"projection,omitempty"`
-		Sort       interface{} `json:"sort,omitempty"`
-		Limit      int64       `json:"limit,omitempty"`
-		Skip       int64       `json:"skip,omitempty"`
+		Filter     interface{}
+		Projection interface{}
+		Sort       interface{}
+		Limit      int64
+		Skip       int64
 	}
 	FindOpt struct {
 		Projection interface{}
@@ -38,26 +38,26 @@ type (
 	}
 
 	updateOpt struct {
-		Filter interface{} `json:"filter,omitempty"`
-		Update interface{} `json:"update,omitempty"`
-		Upsert bool        `json:"upsert,omitempty"`
+		Filter interface{}
+		Update interface{}
+		Upsert bool
 	}
 	UpdateOpt struct {
 		Upsert bool
 	}
 
 	replaceOneOpt struct {
-		Filter      interface{} `json:"filter,omitempty"`
-		Replacement interface{} `json:"replacement,omitempty"`
-		Upsert      bool        `json:"upsert,omitempty"`
+		Filter      interface{}
+		Replacement interface{}
+		Upsert      bool
 	}
 
 	deleteOpt struct {
-		Filter interface{} `json:"filter,omitempty"`
+		Filter interface{}
 	}
 
 	aggregateOpt struct {
-		Pipeline interface{} `json:"pipeline,omitempty"`
+		Pipeline interface{}
 	}
 
 	CountOpt struct {

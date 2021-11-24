@@ -25,16 +25,34 @@ type Client struct {
 	Key        string
 }
 
-func (c *Client) auth() (m M) {
-	b, _ := json.Marshal(
-		struct {
-			DataSource string `json:"dataSource"`
-			Database   string `json:"database"`
-			Collection string `json:"collection"`
-		}{c.DataSource, c.Database, c.Collection},
-	)
-	json.Unmarshal(b, &m)
-	return
+type rawData struct {
+	DataSource  string           `json:"dataSource"`
+	Database    string           `json:"database"`
+	Collection  string           `json:"collection"`
+	Document    *json.RawMessage `json:"document,omitempty"`
+	Documents   *json.RawMessage `json:"documents,omitempty"`
+	Filter      *json.RawMessage `json:"filter,omitempty"`
+	Update      *json.RawMessage `json:"update,omitempty"`
+	Replacement *json.RawMessage `json:"replacement,omitempty"`
+	Pipeline    *json.RawMessage `json:"pipeline,omitempty"`
+	Projection  *json.RawMessage `json:"projection,omitempty"`
+	Sort        *json.RawMessage `json:"sort,omitempty"`
+	Limit       int64            `json:"limit,omitempty"`
+	Skip        int64            `json:"skip,omitempty"`
+	Upsert      bool             `json:"upsert,omitempty"`
+}
+
+func (c *Client) body(data interface{}) (io.Reader, error) {
+	var raw rawData
+	b, _ := json.Marshal(c)
+	json.Unmarshal(b, &raw)
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(b, &raw)
+	b, _ = json.Marshal(raw)
+	return bytes.NewReader(b), nil
 }
 
 func (c *Client) Request(endpoint string, action, data interface{}) error {
@@ -55,20 +73,15 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 		return ErrDecodeToNil
 	}
 
-	m := c.auth()
-	b, err := json.Marshal(action)
+	body, err := c.body(action)
 	if err != nil {
 		return err
 	}
-	if err = json.Unmarshal(b, &m); err != nil {
-		return err
-	}
-	b, _ = json.Marshal(m)
 
 	req, err := http.NewRequest(
 		"POST",
 		fmt.Sprintf(base, c.AppID)+endpoint,
-		bytes.NewReader(b),
+		body,
 	)
 	if err != nil {
 		return err
@@ -97,7 +110,7 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 		return fmt.Errorf("unknown status code: %d", resp.StatusCode)
 	}
 
-	b, err = io.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
