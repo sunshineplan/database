@@ -98,10 +98,6 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 		return fmt.Errorf("api key is required")
 	}
 
-	if data == nil {
-		return mongodb.ErrDecodeToNil
-	}
-
 	body, err := c.body(action)
 	if err != nil {
 		return err

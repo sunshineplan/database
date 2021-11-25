@@ -7,6 +7,10 @@ import (
 )
 
 func (c *Client) FindOne(filter interface{}, opt *mongodb.FindOneOpt, data interface{}) error {
+	if data == nil {
+		return mongodb.ErrDecodeToNil
+	}
+
 	option := findOneOpt{Filter: filter}
 	if opt != nil {
 		option.Projection = opt.Projection
@@ -24,6 +28,10 @@ func (c *Client) FindOne(filter interface{}, opt *mongodb.FindOneOpt, data inter
 }
 
 func (c *Client) Find(filter interface{}, opt *mongodb.FindOpt, data interface{}) error {
+	if data == nil {
+		return mongodb.ErrDecodeToNil
+	}
+
 	option := findOpt{Filter: filter}
 	if opt != nil {
 		option.Projection = opt.Projection
@@ -49,8 +57,7 @@ func (c *Client) InsertOne(doc interface{}) (interface{}, error) {
 		return nil, err
 	}
 	if isValidObjectID(res.InsertedID) {
-		id, _ := c.ObjectID(res.InsertedID)
-		return id, nil
+		return objectID(res.InsertedID), nil
 	}
 	return res.InsertedID, nil
 }
@@ -66,8 +73,7 @@ func (c *Client) InsertMany(docs []interface{}) (ids []interface{}, err error) {
 	}
 	for _, i := range res.InsertedIDs {
 		if isValidObjectID(i) {
-			id, _ := c.ObjectID(i)
-			ids = append(ids, id)
+			ids = append(ids, objectID(i))
 		} else {
 			ids = append(ids, i)
 		}
@@ -89,6 +95,12 @@ func (c *Client) UpdateOne(filter, update interface{}, opt *mongodb.UpdateOpt) (
 	if err = c.Request(updateOne, option, &res); err != nil {
 		return
 	}
+	if id, ok := res.UpsertedID.(string); ok {
+		if isValidObjectID(id) {
+			res.UpsertedID = objectID(id)
+		}
+	}
+
 	return
 }
 
@@ -106,6 +118,12 @@ func (c *Client) UpdateMany(filter, update interface{}, opt *mongodb.UpdateOpt) 
 	if err = c.Request(updateMany, option, &res); err != nil {
 		return
 	}
+	if id, ok := res.UpsertedID.(string); ok {
+		if isValidObjectID(id) {
+			res.UpsertedID = objectID(id)
+		}
+	}
+
 	return
 }
 
@@ -123,6 +141,12 @@ func (c *Client) ReplaceOne(filter, replacement interface{}, opt *mongodb.Update
 	if err = c.Request(replaceOne, option, &res); err != nil {
 		return
 	}
+	if id, ok := res.UpsertedID.(string); ok {
+		if isValidObjectID(id) {
+			res.UpsertedID = objectID(id)
+		}
+	}
+
 	return
 }
 
@@ -157,6 +181,9 @@ func (c *Client) DeleteMany(filter interface{}) (count int64, err error) {
 func (c *Client) Aggregate(pipeline, data interface{}) error {
 	if pipeline == nil {
 		return mongodb.ErrNilDocument
+	}
+	if data == nil {
+		return mongodb.ErrDecodeToNil
 	}
 
 	var res documents
