@@ -53,6 +53,8 @@ type Date interface {
 
 type Client interface {
 	SetTimeout(time.Duration)
+	Connect() error
+	Close() error
 
 	FindOne(filter interface{}, opt *FindOneOpt, data interface{}) error
 	Find(filter interface{}, opt *FindOpt, data interface{}) error

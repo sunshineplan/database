@@ -36,6 +36,24 @@ func (c *Client) SetTimeout(d time.Duration) {
 	defaultTimeout = d
 }
 
+func (c *Client) Connect() error {
+	switch {
+	case c.DataSource == "":
+		return fmt.Errorf("dataSource is required")
+	case c.Database == "":
+		return fmt.Errorf("database is required")
+	case c.Collection == "":
+		return fmt.Errorf("collection is required")
+	case c.AppID == "":
+		return fmt.Errorf("app ID is required")
+	case c.Key == "":
+		return fmt.Errorf("api key is required")
+	}
+	return nil
+}
+
+func (c *Client) Close() error { return nil }
+
 type rawData struct {
 	DataSource  string           `json:"dataSource"`
 	Database    string           `json:"database"`
