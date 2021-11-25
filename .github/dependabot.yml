@@ -1,6 +1,11 @@
 version: 2
 updates:
   - package-ecosystem: "gomod"
+    directory: "/mongodb/driver"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "gomod"
     directory: "/mysql"
     schedule:
       interval: "daily"
