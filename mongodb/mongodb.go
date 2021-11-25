@@ -72,7 +72,7 @@ type Client interface {
 	FindOneAndUpdate(filter, update interface{}, opt *FindAndUpdateOpt, data interface{}) error
 
 	ObjectID(string) (ObjectID, error)
-	Date(time.Time) (Date, error)
+	Date(time.Time) Date
 }
 
 var (

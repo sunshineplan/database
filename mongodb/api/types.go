@@ -49,6 +49,6 @@ func (d date) Interface() interface{} {
 	return mongodb.M{"$date": mongodb.M{"$numberLong": strconv.FormatInt(time.Time(d).UnixMilli(), 10)}}
 }
 
-func (*Client) Date(t time.Time) (mongodb.Date, error) {
-	return date(t), nil
+func (*Client) Date(t time.Time) mongodb.Date {
+	return date(t)
 }
