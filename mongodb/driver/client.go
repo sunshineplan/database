@@ -1,305 +1,151 @@
 package driver
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/sunshineplan/database/mongodb"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 var _ mongodb.Client = &Client{}
 
-type Client struct {
-	coll *mongo.Collection
-}
-
 var defaultTimeout = time.Minute
+
+// Client contains mongodb basic configure.
+type Client struct {
+	Server     string
+	Port       int
+	Database   string
+	Collection string
+	Username   string
+	Password   string
+	SRV        bool
+
+	client *mongo.Client
+	coll   *mongo.Collection
+}
 
 func (c *Client) SetTimeout(d time.Duration) {
 	defaultTimeout = d
 }
 
-func (c *Config) Client() (*Client, error) {
-	client, err := c.MongoClient()
+// URI returns mongodb uri connection string
+func (c *Client) URI() string {
+	var prefix, auth, server string
+	if c.SRV {
+		prefix = "mongodb+srv"
+	} else {
+		prefix = "mongodb"
+	}
+
+	if c.Username != "" && c.Password != "" {
+		auth = fmt.Sprintf("%s:%s@", c.Username, c.Password)
+	}
+
+	if c.SRV || c.Port == 27017 || c.Port == 0 {
+		server = c.Server
+	} else {
+		server = fmt.Sprintf("%s:%d", c.Server, c.Port)
+	}
+
+	return fmt.Sprintf("%s://%s%s/%s", prefix, auth, server, c.Database)
+}
+
+// MongoClient opens a mongodb database return *mongo.Client.
+func (c *Client) MongoClient() (*mongo.Client, error) {
+	if c.client != nil {
+		return c.client, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(c.URI()))
 	if err != nil {
 		return nil, err
 	}
 
+	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		return nil, err
+	}
+
+	c.client = client
+
+	return client, nil
+}
+
+func (c *Client) Connect() error {
 	switch {
 	case c.Database == "":
-		return nil, errors.New("database is required")
+		return errors.New("database is required")
 	case c.Collection == "":
-		return nil, errors.New("collection is required")
+		return errors.New("collection is required")
 	}
 
-	return &Client{client.Database(c.Database).Collection(c.Collection)}, nil
-}
-
-func (c *Client) FindOne(filter interface{}, opt *mongodb.FindOneOpt, data interface{}) error {
-	option := options.FindOne()
-	if opt != nil {
-		option.Projection = opt.Projection
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	err := c.coll.FindOne(ctx, filter, option).Decode(data)
-	if err == mongo.ErrNoDocuments {
-		return mongodb.ErrNoDocuments
-	}
-
-	return err
-}
-
-func (c *Client) Find(filter interface{}, opt *mongodb.FindOpt, data interface{}) error {
-	option := options.Find()
-	if opt != nil {
-		option.Projection = opt.Projection
-		option.Sort = opt.Sort
-		option.Limit = &opt.Limit
-		option.Skip = &opt.Skip
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	cur, err := c.coll.Find(ctx, filter, option)
-	if err != nil {
-		return err
-	}
-	return cur.All(ctx, data)
-}
-
-func (c *Client) InsertOne(doc interface{}) (interface{}, error) {
-	if doc == nil {
-		return "", mongodb.ErrNilDocument
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	res, err := c.coll.InsertOne(ctx, doc)
-	if err != nil {
-		return "", err
-	}
-	if id, ok := res.InsertedID.(primitive.ObjectID); ok {
-		return objectID(id), nil
-	}
-	return res.InsertedID, nil
-}
-
-func (c *Client) InsertMany(docs []interface{}) ([]interface{}, error) {
-	if docs == nil {
-		return nil, mongodb.ErrNilDocument
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	res, err := c.coll.InsertMany(ctx, docs)
-	if err != nil {
-		return nil, err
-	}
-
-	var ids []interface{}
-	for _, i := range res.InsertedIDs {
-		if id, ok := i.(primitive.ObjectID); ok {
-			ids = append(ids, objectID(id))
-		} else {
-			ids = append(ids, i)
+	if c.client == nil {
+		_, err := c.MongoClient()
+		if err != nil {
+			return err
 		}
 	}
-	return ids, nil
+
+	c.coll = c.client.Database(c.Database).Collection(c.Collection)
+
+	return nil
 }
 
-func (c *Client) UpdateOne(filter, update interface{}, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
-	if filter == nil || update == nil {
-		return nil, mongodb.ErrNilDocument
+func (c *Client) Close() error {
+	if c.client != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+		defer func() {
+			cancel()
+			c.client = nil
+		}()
+		return c.client.Disconnect(ctx)
 	}
-
-	option := options.Update()
-	if opt != nil {
-		option.Upsert = &opt.Upsert
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	res, err := c.coll.UpdateOne(ctx, filter, update, option)
-	if err != nil {
-		return nil, err
-	}
-	return (*mongodb.UpdateResult)(res), nil
+	return nil
 }
 
-func (c *Client) UpdateMany(filter, update interface{}, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
-	if filter == nil || update == nil {
-		return nil, mongodb.ErrNilDocument
+// Backup backups mongodb database to file.
+func (c *Client) Backup(file string) error {
+	args := []string{}
+	args = append(args, fmt.Sprintf("--uri=%q", c.URI()))
+	if c.Collection != "" {
+		args = append(args, "-c"+c.Collection)
 	}
+	args = append(args, "--gzip")
+	args = append(args, fmt.Sprintf("--archive=%q", file))
 
-	option := options.Update()
-	if opt != nil {
-		option.Upsert = &opt.Upsert
+	command := exec.Command("mongodump", args...)
+	var stderr bytes.Buffer
+	command.Stderr = &stderr
+	if err := command.Run(); err != nil {
+		return fmt.Errorf("failed to backup: %s\n%v", stderr.String(), err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	res, err := c.coll.UpdateMany(ctx, filter, update, option)
-	if err != nil {
-		return nil, err
-	}
-	return (*mongodb.UpdateResult)(res), nil
+	return nil
 }
 
-func (c *Client) ReplaceOne(filter, replacement interface{}, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
-	if filter == nil || replacement == nil {
-		return nil, mongodb.ErrNilDocument
+// Restore restores mongodb database collection from file.
+func (c *Client) Restore(file string) error {
+	args := []string{}
+	args = append(args, fmt.Sprintf("--uri=%q", c.URI()))
+	args = append(args, "--gzip")
+	args = append(args, "--drop")
+	args = append(args, fmt.Sprintf("--archive=%q", file))
+
+	command := exec.Command("mongorestore", args...)
+	var stderr bytes.Buffer
+	command.Stderr = &stderr
+	if err := command.Run(); err != nil {
+		return fmt.Errorf("failed to restore: %s\n%v", stderr.String(), err)
 	}
-
-	option := options.Replace()
-	if opt != nil {
-		option.Upsert = &opt.Upsert
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	res, err := c.coll.ReplaceOne(ctx, filter, replacement, option)
-	if err != nil {
-		return nil, err
-	}
-	return (*mongodb.UpdateResult)(res), nil
-}
-
-func (c *Client) DeleteOne(filter interface{}) (int64, error) {
-	if filter == nil {
-		return 0, mongodb.ErrNilDocument
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	res, err := c.coll.DeleteOne(ctx, filter)
-	if err != nil {
-		return 0, err
-	}
-	return res.DeletedCount, nil
-}
-
-func (c *Client) DeleteMany(filter interface{}) (int64, error) {
-	if filter == nil {
-		return 0, mongodb.ErrNilDocument
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	res, err := c.coll.DeleteMany(ctx, filter)
-	if err != nil {
-		return 0, err
-	}
-	return res.DeletedCount, nil
-}
-
-func (c *Client) Aggregate(pipeline, data interface{}) error {
-	if pipeline == nil {
-		return mongodb.ErrNilDocument
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	cur, err := c.coll.Aggregate(ctx, pipeline)
-	if err != nil {
-		return err
-	}
-	return cur.All(ctx, data)
-}
-
-func (c *Client) CountDocuments(filter interface{}, opt *mongodb.CountOpt) (int64, error) {
-	if filter == nil {
-		filter = mongodb.M{}
-	}
-
-	option := options.Count()
-	if opt != nil {
-		option.Limit = &opt.Limit
-		option.Skip = &opt.Skip
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	return c.coll.CountDocuments(ctx, filter, option)
-}
-
-func (c *Client) FindOneAndDelete(filter interface{}, opt *mongodb.FindOneOpt, data interface{}) error {
-	if filter == nil {
-		return mongodb.ErrNilDocument
-	}
-
-	option := options.FindOneAndDelete()
-	if opt != nil {
-		option.Projection = opt.Projection
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	err := c.coll.FindOneAndDelete(ctx, filter, option).Decode(data)
-	if err == mongo.ErrNoDocuments {
-		return mongodb.ErrNoDocuments
-	}
-
-	return err
-}
-
-func (c *Client) FindOneAndReplace(filter, replacement interface{}, opt *mongodb.FindAndUpdateOpt, data interface{}) error {
-	if filter == nil || replacement == nil {
-		return mongodb.ErrNilDocument
-	}
-
-	option := options.FindOneAndReplace()
-	if opt != nil {
-		option.Projection = opt.Projection
-		option.Upsert = &opt.Upsert
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	err := c.coll.FindOneAndReplace(ctx, filter, replacement, option).Decode(data)
-	if err == mongo.ErrNoDocuments {
-		return mongodb.ErrNoDocuments
-	}
-
-	return err
-}
-
-func (c *Client) FindOneAndUpdate(filter, update interface{}, opt *mongodb.FindAndUpdateOpt, data interface{}) error {
-	if filter == nil || update == nil {
-		return mongodb.ErrNilDocument
-	}
-
-	option := options.FindOneAndUpdate()
-	if opt != nil {
-		option.Projection = opt.Projection
-		option.Upsert = &opt.Upsert
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	err := c.coll.FindOneAndUpdate(ctx, filter, update, option).Decode(data)
-	if err == mongo.ErrNoDocuments {
-		return mongodb.ErrNoDocuments
-	}
-
-	return err
+	return nil
 }
