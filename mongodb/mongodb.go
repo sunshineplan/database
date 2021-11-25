@@ -1,100 +1,80 @@
 package mongodb
 
 import (
-	"bytes"
-	"context"
-	"fmt"
-	"os/exec"
+	"errors"
 	"time"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-// Config contains mongodb basic configure.
-type Config struct {
-	Server     string
-	Port       int
-	Database   string
-	Collection string
-	Username   string
-	Password   string
-	SRV        bool
+type M map[string]interface{}
+
+type (
+	FindOneOpt struct {
+		Projection interface{}
+	}
+
+	FindOpt struct {
+		Projection interface{}
+		Sort       interface{}
+		Limit      int64
+		Skip       int64
+	}
+
+	UpdateOpt struct {
+		Upsert bool
+	}
+
+	CountOpt struct {
+		Limit int64
+		Skip  int64
+	}
+
+	FindAndUpdateOpt struct {
+		Projection interface{}
+		Upsert     bool
+	}
+
+	UpdateResult struct {
+		MatchedCount  int64
+		ModifiedCount int64
+		UpsertedCount int64
+		UpsertedID    interface{}
+	}
+)
+
+type ObjectID interface {
+	Hex() string
+	Interface() interface{}
 }
 
-// URI returns mongodb uri connection string
-func (c *Config) URI() string {
-	var prefix, auth, server string
-	if c.SRV {
-		prefix = "mongodb+srv"
-	} else {
-		prefix = "mongodb"
-	}
-
-	if c.Username != "" && c.Password != "" {
-		auth = fmt.Sprintf("%s:%s@", c.Username, c.Password)
-	}
-
-	if c.SRV || c.Port == 27017 || c.Port == 0 {
-		server = c.Server
-	} else {
-		server = fmt.Sprintf("%s:%d", c.Server, c.Port)
-	}
-
-	return fmt.Sprintf("%s://%s%s/%s", prefix, auth, server, c.Database)
+type Date interface {
+	Time() time.Time
+	Interface() interface{}
 }
 
-// Open opens a mongodb database.
-func (c *Config) Open() (*mongo.Client, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+type Client interface {
+	SetTimeout(time.Duration)
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(c.URI()))
-	if err != nil {
-		return nil, err
-	}
+	FindOne(filter interface{}, opt *FindOneOpt, data interface{}) error
+	Find(filter interface{}, opt *FindOpt, data interface{}) error
+	InsertOne(doc interface{}) (id interface{}, err error)
+	InsertMany(docs []interface{}) (ids []interface{}, err error)
+	UpdateOne(filter, update interface{}, opt *UpdateOpt) (*UpdateResult, error)
+	UpdateMany(filter, update interface{}, opt *UpdateOpt) (*UpdateResult, error)
+	ReplaceOne(filter, replacement interface{}, opt *UpdateOpt) (*UpdateResult, error)
+	DeleteOne(filter interface{}) (count int64, err error)
+	DeleteMany(filter interface{}) (count int64, err error)
+	Aggregate(pipeline, data interface{}) error
+	CountDocuments(filter interface{}, opt *CountOpt) (n int64, err error)
+	FindOneAndDelete(filter interface{}, opt *FindOneOpt, data interface{}) error
+	FindOneAndReplace(filter, replacement interface{}, opt *FindAndUpdateOpt, data interface{}) error
+	FindOneAndUpdate(filter, update interface{}, opt *FindAndUpdateOpt, data interface{}) error
 
-	err = client.Ping(ctx, readpref.Primary())
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
+	ObjectID(string) (ObjectID, error)
+	Date(time.Time) (Date, error)
 }
 
-// Backup backups mongodb database to file.
-func (c *Config) Backup(file string) error {
-	args := []string{}
-	args = append(args, fmt.Sprintf("--uri=%q", c.URI()))
-	if c.Collection != "" {
-		args = append(args, "-c"+c.Collection)
-	}
-	args = append(args, "--gzip")
-	args = append(args, fmt.Sprintf("--archive=%q", file))
-
-	command := exec.Command("mongodump", args...)
-	var stderr bytes.Buffer
-	command.Stderr = &stderr
-	if err := command.Run(); err != nil {
-		return fmt.Errorf("failed to backup: %s\n%v", stderr.String(), err)
-	}
-	return nil
-}
-
-// Restore restores mongodb database collection from file.
-func (c *Config) Restore(file string) error {
-	args := []string{}
-	args = append(args, fmt.Sprintf("--uri=%q", c.URI()))
-	args = append(args, "--gzip")
-	args = append(args, "--drop")
-	args = append(args, fmt.Sprintf("--archive=%q", file))
-
-	command := exec.Command("mongorestore", args...)
-	var stderr bytes.Buffer
-	command.Stderr = &stderr
-	if err := command.Run(); err != nil {
-		return fmt.Errorf("failed to restore: %s\n%v", stderr.String(), err)
-	}
-	return nil
-}
+var (
+	ErrNilDocument = errors.New("document is nil")
+	ErrNoDocuments = errors.New("mongo: no documents in result")
+	ErrDecodeToNil = errors.New("cannot Decode to nil value")
+)

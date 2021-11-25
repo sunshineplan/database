@@ -2,9 +2,11 @@ package api
 
 import (
 	"encoding/json"
+
+	"github.com/sunshineplan/database/mongodb"
 )
 
-func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) error {
+func (c *Client) FindOne(filter interface{}, opt *mongodb.FindOneOpt, data interface{}) error {
 	option := findOneOpt{Filter: filter}
 	if opt != nil {
 		option.Projection = opt.Projection
@@ -15,13 +17,13 @@ func (c *Client) FindOne(filter interface{}, opt *FindOneOpt, data interface{}) 
 		return err
 	}
 	if res.Document == nil {
-		return ErrNoDocuments
+		return mongodb.ErrNoDocuments
 	}
 	b, _ := json.Marshal(res.Document)
 	return json.Unmarshal(b, data)
 }
 
-func (c *Client) Find(filter interface{}, opt *FindOpt, data interface{}) error {
+func (c *Client) Find(filter interface{}, opt *mongodb.FindOpt, data interface{}) error {
 	option := findOpt{Filter: filter}
 	if opt != nil {
 		option.Projection = opt.Projection
@@ -38,34 +40,44 @@ func (c *Client) Find(filter interface{}, opt *FindOpt, data interface{}) error 
 	return json.Unmarshal(b, data)
 }
 
-func (c *Client) InsertOne(doc interface{}) (id string, err error) {
+func (c *Client) InsertOne(doc interface{}) (interface{}, error) {
 	if doc == nil {
-		return "", ErrNilDocument
+		return "", mongodb.ErrNilDocument
 	}
-	var res insertedId
-	if err = c.Request(insertOne, document{doc}, &res); err != nil {
-		return
+	var res insertedID
+	if err := c.Request(insertOne, document{doc}, &res); err != nil {
+		return nil, err
 	}
-	id = res.InsertedId
-	return
+	if isValidObjectID(res.InsertedID) {
+		id, _ := c.ObjectID(res.InsertedID)
+		return id, nil
+	}
+	return res.InsertedID, nil
 }
 
-func (c *Client) InsertMany(docs interface{}) (ids []string, err error) {
+func (c *Client) InsertMany(docs []interface{}) (ids []interface{}, err error) {
 	if docs == nil {
-		return nil, ErrNilDocument
+		return nil, mongodb.ErrNilDocument
 	}
 
-	var res insertedIds
+	var res insertedIDs
 	if err = c.Request(insertMany, documents{docs}, &res); err != nil {
 		return
 	}
-	ids = res.InsertedIds
+	for _, i := range res.InsertedIDs {
+		if isValidObjectID(i) {
+			id, _ := c.ObjectID(i)
+			ids = append(ids, id)
+		} else {
+			ids = append(ids, i)
+		}
+	}
 	return
 }
 
-func (c *Client) UpdateOne(filter, update interface{}, opt *UpdateOpt) (res Result, err error) {
+func (c *Client) UpdateOne(filter, update interface{}, opt *mongodb.UpdateOpt) (res *mongodb.UpdateResult, err error) {
 	if filter == nil || update == nil {
-		err = ErrNilDocument
+		err = mongodb.ErrNilDocument
 		return
 	}
 
@@ -80,9 +92,9 @@ func (c *Client) UpdateOne(filter, update interface{}, opt *UpdateOpt) (res Resu
 	return
 }
 
-func (c *Client) UpdateMany(filter, update interface{}, opt *UpdateOpt) (res Result, err error) {
+func (c *Client) UpdateMany(filter, update interface{}, opt *mongodb.UpdateOpt) (res *mongodb.UpdateResult, err error) {
 	if filter == nil || update == nil {
-		err = ErrNilDocument
+		err = mongodb.ErrNilDocument
 		return
 	}
 
@@ -97,9 +109,9 @@ func (c *Client) UpdateMany(filter, update interface{}, opt *UpdateOpt) (res Res
 	return
 }
 
-func (c *Client) ReplaceOne(filter, replacement interface{}, opt *UpdateOpt) (res Result, err error) {
+func (c *Client) ReplaceOne(filter, replacement interface{}, opt *mongodb.UpdateOpt) (res *mongodb.UpdateResult, err error) {
 	if filter == nil || replacement == nil {
-		err = ErrNilDocument
+		err = mongodb.ErrNilDocument
 		return
 	}
 
@@ -116,7 +128,7 @@ func (c *Client) ReplaceOne(filter, replacement interface{}, opt *UpdateOpt) (re
 
 func (c *Client) DeleteOne(filter interface{}) (count int64, err error) {
 	if filter == nil {
-		err = ErrNilDocument
+		err = mongodb.ErrNilDocument
 		return
 	}
 
@@ -130,7 +142,7 @@ func (c *Client) DeleteOne(filter interface{}) (count int64, err error) {
 
 func (c *Client) DeleteMany(filter interface{}) (count int64, err error) {
 	if filter == nil {
-		err = ErrNilDocument
+		err = mongodb.ErrNilDocument
 		return
 	}
 
@@ -144,7 +156,7 @@ func (c *Client) DeleteMany(filter interface{}) (count int64, err error) {
 
 func (c *Client) Aggregate(pipeline, data interface{}) error {
 	if pipeline == nil {
-		return ErrNilDocument
+		return mongodb.ErrNilDocument
 	}
 
 	var res documents
@@ -155,19 +167,19 @@ func (c *Client) Aggregate(pipeline, data interface{}) error {
 	return json.Unmarshal(b, data)
 }
 
-func (c *Client) CountDocuments(filter interface{}, opt *CountOpt) (n int64, err error) {
+func (c *Client) CountDocuments(filter interface{}, opt *mongodb.CountOpt) (n int64, err error) {
 	if filter == nil {
-		filter = M{}
+		filter = mongodb.M{}
 	}
 
-	pipeline := []M{{"$match": filter}}
+	pipeline := []mongodb.M{{"$match": filter}}
 	if opt != nil {
-		pipeline = append(pipeline, M{"$skip": opt.Skip})
+		pipeline = append(pipeline, mongodb.M{"$skip": opt.Skip})
 		if opt.Limit != 0 {
-			pipeline = append(pipeline, M{"$limit": opt.Limit})
+			pipeline = append(pipeline, mongodb.M{"$limit": opt.Limit})
 		}
 	}
-	pipeline = append(pipeline, M{"$group": M{"_id": nil, "n": M{"$sum": 1}}})
+	pipeline = append(pipeline, mongodb.M{"$group": mongodb.M{"_id": nil, "n": mongodb.M{"$sum": 1}}})
 
 	var res []struct{ N int64 }
 	if err = c.Aggregate(pipeline, &res); err != nil {
@@ -182,9 +194,9 @@ func (c *Client) CountDocuments(filter interface{}, opt *CountOpt) (n int64, err
 	return
 }
 
-func (c *Client) FindOneAndDelete(filter interface{}, opt *FindOneOpt, data interface{}) (err error) {
+func (c *Client) FindOneAndDelete(filter interface{}, opt *mongodb.FindOneOpt, data interface{}) (err error) {
 	if filter == nil {
-		return ErrNilDocument
+		return mongodb.ErrNilDocument
 	}
 
 	if err = c.FindOne(filter, opt, &data); err != nil {
@@ -195,28 +207,44 @@ func (c *Client) FindOneAndDelete(filter interface{}, opt *FindOneOpt, data inte
 	return
 }
 
-func (c *Client) FindOneAndReplace(filter, replacement interface{}, opt *FindOneOpt, data interface{}) (err error) {
+func (c *Client) FindOneAndReplace(filter, replacement interface{}, opt *mongodb.FindAndUpdateOpt, data interface{}) (err error) {
 	if filter == nil || replacement == nil {
-		return ErrNilDocument
+		return mongodb.ErrNilDocument
 	}
 
-	if err = c.FindOne(filter, opt, &data); err != nil {
+	findOneOpt := new(mongodb.FindOneOpt)
+	if opt != nil {
+		findOneOpt.Projection = opt.Projection
+	}
+	if err = c.FindOne(filter, findOneOpt, &data); err != nil {
 		return
 	}
 
-	_, err = c.ReplaceOne(filter, replacement, nil)
+	updateOpt := new(mongodb.UpdateOpt)
+	if opt != nil {
+		updateOpt.Upsert = opt.Upsert
+	}
+	_, err = c.ReplaceOne(filter, replacement, updateOpt)
 	return
 }
 
-func (c *Client) FindOneAndUpdate(filter, update interface{}, opt *FindOneOpt, data interface{}) (err error) {
+func (c *Client) FindOneAndUpdate(filter, update interface{}, opt *mongodb.FindAndUpdateOpt, data interface{}) (err error) {
 	if filter == nil || update == nil {
-		return ErrNilDocument
+		return mongodb.ErrNilDocument
 	}
 
-	if err = c.FindOne(filter, opt, &data); err != nil {
+	findOneOpt := new(mongodb.FindOneOpt)
+	if opt != nil {
+		findOneOpt.Projection = opt.Projection
+	}
+	if err = c.FindOne(filter, findOneOpt, &data); err != nil {
 		return
 	}
 
-	_, err = c.UpdateOne(filter, update, nil)
+	updateOpt := new(mongodb.UpdateOpt)
+	if opt != nil {
+		updateOpt.Upsert = opt.Upsert
+	}
+	_, err = c.UpdateOne(filter, update, updateOpt)
 	return
 }

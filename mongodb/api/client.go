@@ -2,13 +2,20 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/sunshineplan/database/mongodb"
 )
 
+var _ mongodb.Client = &Client{}
+
 var defaultHTTPClient = http.DefaultClient
+var defaultTimeout = time.Minute
 
 func DefaultHTTPClient(client *http.Client) {
 	if client == nil {
@@ -23,6 +30,10 @@ type Client struct {
 	Collection string
 	AppID      string
 	Key        string
+}
+
+func (c *Client) SetTimeout(d time.Duration) {
+	defaultTimeout = d
 }
 
 type rawData struct {
@@ -70,7 +81,7 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 	}
 
 	if data == nil {
-		return ErrDecodeToNil
+		return mongodb.ErrDecodeToNil
 	}
 
 	body, err := c.body(action)
@@ -89,9 +100,23 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("api-key", c.Key)
 
-	resp, err := defaultHTTPClient.Do(req)
-	if err != nil {
-		return err
+	t := time.NewTimer(defaultTimeout)
+	var resp *http.Response
+	ch := make(chan error, 1)
+	go func() {
+		resp, err = defaultHTTPClient.Do(req)
+		ch <- err
+	}()
+	select {
+	case <-t.C:
+		return context.DeadlineExceeded
+	case err := <-ch:
+		if !t.Stop() {
+			<-t.C
+		}
+		if err != nil {
+			return err
+		}
 	}
 	defer resp.Body.Close()
 

@@ -1,73 +1,54 @@
 package api
 
-type M map[string]interface{}
+import (
+	"encoding/hex"
+	"errors"
+	"strconv"
+	"time"
 
-type (
-	document struct {
-		Document interface{}
-	}
-	documents struct {
-		Documents interface{}
-	}
-	insertedId   struct{ InsertedId string }
-	insertedIds  struct{ InsertedIds []string }
-	deletedCount struct{ DeletedCount int64 }
+	"github.com/sunshineplan/database/mongodb"
 )
 
-type (
-	findOneOpt struct {
-		Filter     interface{}
-		Projection interface{}
-	}
-	FindOneOpt struct {
-		Projection interface{}
-	}
-
-	findOpt struct {
-		Filter     interface{}
-		Projection interface{}
-		Sort       interface{}
-		Limit      int64
-		Skip       int64
-	}
-	FindOpt struct {
-		Projection interface{}
-		Sort       interface{}
-		Limit      int64
-		Skip       int64
-	}
-
-	updateOpt struct {
-		Filter interface{}
-		Update interface{}
-		Upsert bool
-	}
-	UpdateOpt struct {
-		Upsert bool
-	}
-
-	replaceOneOpt struct {
-		Filter      interface{}
-		Replacement interface{}
-		Upsert      bool
-	}
-
-	deleteOpt struct {
-		Filter interface{}
-	}
-
-	aggregateOpt struct {
-		Pipeline interface{}
-	}
-
-	CountOpt struct {
-		Limit int64
-		Skip  int64
-	}
+var (
+	_ mongodb.ObjectID = objectID("")
+	_ mongodb.Date     = date(time.Time{})
 )
 
-type Result struct {
-	MatchedCount  int64
-	ModifiedCount int64
-	UpsertedId    string
+type objectID string
+
+func (id objectID) Hex() string {
+	return string(id)
+}
+
+func (id objectID) Interface() interface{} {
+	return mongodb.M{"$oid": id}
+}
+
+func (*Client) ObjectID(s string) (mongodb.ObjectID, error) {
+	if !isValidObjectID(s) {
+		return nil, errors.New("the provided string is not a valid ObjectID")
+	}
+	return objectID(s), nil
+}
+
+func isValidObjectID(s string) bool {
+	if len(s) != 24 {
+		return false
+	}
+	_, err := hex.DecodeString(s)
+	return err == nil
+}
+
+type date time.Time
+
+func (d date) Time() time.Time {
+	return time.Time(d)
+}
+
+func (d date) Interface() interface{} {
+	return mongodb.M{"$date": mongodb.M{"$numberLong": strconv.FormatInt(time.Time(d).UnixMilli(), 10)}}
+}
+
+func (*Client) Date(t time.Time) (mongodb.Date, error) {
+	return date(t), nil
 }
