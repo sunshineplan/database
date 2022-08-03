@@ -14,6 +14,8 @@ import (
 
 var _ mongodb.Client = &Client{}
 
+const defaultVersion = "v1"
+
 var defaultHTTPClient = http.DefaultClient
 var defaultTimeout = time.Minute
 
@@ -30,6 +32,7 @@ type Client struct {
 	Collection string
 	AppID      string
 	Key        string
+	Version    string
 }
 
 func (c *Client) SetTimeout(d time.Duration) {
@@ -39,15 +42,17 @@ func (c *Client) SetTimeout(d time.Duration) {
 func (c *Client) Connect() error {
 	switch {
 	case c.DataSource == "":
-		return fmt.Errorf("dataSource is required")
+		return fmt.Errorf("DataSource is required")
 	case c.Database == "":
 		return fmt.Errorf("database is required")
 	case c.Collection == "":
 		return fmt.Errorf("collection is required")
 	case c.AppID == "":
-		return fmt.Errorf("app ID is required")
+		return fmt.Errorf("AppID is required")
 	case c.Key == "":
-		return fmt.Errorf("api key is required")
+		return fmt.Errorf("API key is required")
+	case c.Version == "":
+		c.Version = defaultVersion
 	}
 	return nil
 }
@@ -71,7 +76,7 @@ type rawData struct {
 	Upsert      bool             `json:"upsert,omitempty"`
 }
 
-func (c *Client) body(data interface{}) (io.Reader, error) {
+func (c *Client) body(data any) (io.Reader, error) {
 	var raw rawData
 	b, _ := json.Marshal(c)
 	json.Unmarshal(b, &raw)
@@ -84,18 +89,9 @@ func (c *Client) body(data interface{}) (io.Reader, error) {
 	return bytes.NewReader(b), nil
 }
 
-func (c *Client) Request(endpoint string, action, data interface{}) error {
-	switch {
-	case c.DataSource == "":
-		return fmt.Errorf("dataSource is required")
-	case c.Database == "":
-		return fmt.Errorf("database is required")
-	case c.Collection == "":
-		return fmt.Errorf("collection is required")
-	case c.AppID == "":
-		return fmt.Errorf("app ID is required")
-	case c.Key == "":
-		return fmt.Errorf("api key is required")
+func (c *Client) Request(endpoint string, action, data any) error {
+	if err := c.Connect(); err != nil {
+		return err
 	}
 
 	body, err := c.body(action)
@@ -105,7 +101,7 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 
 	req, err := http.NewRequest(
 		"POST",
-		fmt.Sprintf(base, c.AppID)+endpoint,
+		fmt.Sprintf(base, c.AppID, c.Version)+endpoint,
 		body,
 	)
 	if err != nil {
@@ -114,7 +110,6 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("api-key", c.Key)
 
-	t := time.NewTimer(defaultTimeout)
 	var resp *http.Response
 	ch := make(chan error, 1)
 	go func() {
@@ -122,12 +117,9 @@ func (c *Client) Request(endpoint string, action, data interface{}) error {
 		ch <- err
 	}()
 	select {
-	case <-t.C:
+	case <-time.After(defaultTimeout):
 		return context.DeadlineExceeded
 	case err := <-ch:
-		if !t.Stop() {
-			<-t.C
-		}
 		if err != nil {
 			return err
 		}
