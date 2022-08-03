@@ -20,7 +20,7 @@ func (id objectID) Hex() string {
 	return string(id)
 }
 
-func (id objectID) Interface() interface{} {
+func (id objectID) Interface() any {
 	return mongodb.M{"$oid": id}
 }
 
@@ -45,7 +45,7 @@ func (d date) Time() time.Time {
 	return time.Time(d)
 }
 
-func (d date) Interface() interface{} {
+func (d date) Interface() any {
 	return mongodb.M{"$date": mongodb.M{"$numberLong": strconv.FormatInt(time.Time(d).UnixMilli(), 10)}}
 }
 

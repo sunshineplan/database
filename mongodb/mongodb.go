@@ -5,16 +5,16 @@ import (
 	"time"
 )
 
-type M map[string]interface{}
+type M map[string]any
 
 type (
 	FindOneOpt struct {
-		Projection interface{}
+		Projection any
 	}
 
 	FindOpt struct {
-		Projection interface{}
-		Sort       interface{}
+		Projection any
+		Sort       any
 		Limit      int64
 		Skip       int64
 	}
@@ -29,7 +29,7 @@ type (
 	}
 
 	FindAndUpdateOpt struct {
-		Projection interface{}
+		Projection any
 		Upsert     bool
 	}
 
@@ -37,18 +37,18 @@ type (
 		MatchedCount  int64
 		ModifiedCount int64
 		UpsertedCount int64
-		UpsertedID    interface{}
+		UpsertedID    any
 	}
 )
 
 type ObjectID interface {
 	Hex() string
-	Interface() interface{}
+	Interface() any
 }
 
 type Date interface {
 	Time() time.Time
-	Interface() interface{}
+	Interface() any
 }
 
 type Client interface {
@@ -56,20 +56,20 @@ type Client interface {
 	Connect() error
 	Close() error
 
-	FindOne(filter interface{}, opt *FindOneOpt, data interface{}) error
-	Find(filter interface{}, opt *FindOpt, data interface{}) error
-	InsertOne(doc interface{}) (id interface{}, err error)
-	InsertMany(docs []interface{}) (ids []interface{}, err error)
-	UpdateOne(filter, update interface{}, opt *UpdateOpt) (*UpdateResult, error)
-	UpdateMany(filter, update interface{}, opt *UpdateOpt) (*UpdateResult, error)
-	ReplaceOne(filter, replacement interface{}, opt *UpdateOpt) (*UpdateResult, error)
-	DeleteOne(filter interface{}) (count int64, err error)
-	DeleteMany(filter interface{}) (count int64, err error)
-	Aggregate(pipeline, data interface{}) error
-	CountDocuments(filter interface{}, opt *CountOpt) (n int64, err error)
-	FindOneAndDelete(filter interface{}, opt *FindOneOpt, data interface{}) error
-	FindOneAndReplace(filter, replacement interface{}, opt *FindAndUpdateOpt, data interface{}) error
-	FindOneAndUpdate(filter, update interface{}, opt *FindAndUpdateOpt, data interface{}) error
+	FindOne(filter any, opt *FindOneOpt, data any) error
+	Find(filter any, opt *FindOpt, data any) error
+	InsertOne(doc any) (id any, err error)
+	InsertMany(docs []any) (ids []any, err error)
+	UpdateOne(filter, update any, opt *UpdateOpt) (*UpdateResult, error)
+	UpdateMany(filter, update any, opt *UpdateOpt) (*UpdateResult, error)
+	ReplaceOne(filter, replacement any, opt *UpdateOpt) (*UpdateResult, error)
+	DeleteOne(filter any) (count int64, err error)
+	DeleteMany(filter any) (count int64, err error)
+	Aggregate(pipeline, data any) error
+	CountDocuments(filter any, opt *CountOpt) (n int64, err error)
+	FindOneAndDelete(filter any, opt *FindOneOpt, data any) error
+	FindOneAndReplace(filter, replacement any, opt *FindAndUpdateOpt, data any) error
+	FindOneAndUpdate(filter, update any, opt *FindAndUpdateOpt, data any) error
 
 	ObjectID(string) (ObjectID, error)
 	Date(time.Time) Date

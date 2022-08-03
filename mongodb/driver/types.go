@@ -18,7 +18,7 @@ func (id objectID) Hex() string {
 	return primitive.ObjectID(id).Hex()
 }
 
-func (id objectID) Interface() interface{} {
+func (id objectID) Interface() any {
 	return primitive.ObjectID(id)
 }
 
@@ -36,7 +36,7 @@ func (d date) Time() time.Time {
 	return time.Time(d)
 }
 
-func (d date) Interface() interface{} {
+func (d date) Interface() any {
 	return time.Time(d)
 }
 

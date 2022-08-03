@@ -1,6 +1,6 @@
 package api
 
-const base = "https://data.mongodb-api.com/app/%s/endpoint/data/beta"
+const base = "https://data.mongodb-api.com/app/%s/endpoint/data/%s"
 
 const (
 	findOne    = "/action/findOne"
@@ -17,10 +17,10 @@ const (
 
 type (
 	document struct {
-		Document interface{}
+		Document any
 	}
 	documents struct {
-		Documents interface{}
+		Documents any
 	}
 	insertedID   struct{ InsertedID string }
 	insertedIDs  struct{ InsertedIDs []string }
@@ -29,35 +29,35 @@ type (
 
 type (
 	findOneOpt struct {
-		Filter     interface{}
-		Projection interface{}
+		Filter     any
+		Projection any
 	}
 
 	findOpt struct {
-		Filter     interface{}
-		Projection interface{}
-		Sort       interface{}
+		Filter     any
+		Projection any
+		Sort       any
 		Limit      int64
 		Skip       int64
 	}
 
 	updateOpt struct {
-		Filter interface{}
-		Update interface{}
+		Filter any
+		Update any
 		Upsert bool
 	}
 
 	replaceOneOpt struct {
-		Filter      interface{}
-		Replacement interface{}
+		Filter      any
+		Replacement any
 		Upsert      bool
 	}
 
 	deleteOpt struct {
-		Filter interface{}
+		Filter any
 	}
 
 	aggregateOpt struct {
-		Pipeline interface{}
+		Pipeline any
 	}
 )

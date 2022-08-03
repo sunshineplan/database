@@ -9,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func (c *Client) FindOne(filter interface{}, opt *mongodb.FindOneOpt, data interface{}) error {
+func (c *Client) FindOne(filter any, opt *mongodb.FindOneOpt, data any) error {
 	if filter == nil {
 		filter = mongodb.M{}
 	}
@@ -33,7 +33,7 @@ func (c *Client) FindOne(filter interface{}, opt *mongodb.FindOneOpt, data inter
 	return err
 }
 
-func (c *Client) Find(filter interface{}, opt *mongodb.FindOpt, data interface{}) error {
+func (c *Client) Find(filter any, opt *mongodb.FindOpt, data any) error {
 	if filter == nil {
 		filter = mongodb.M{}
 	}
@@ -59,7 +59,7 @@ func (c *Client) Find(filter interface{}, opt *mongodb.FindOpt, data interface{}
 	return cur.All(ctx, data)
 }
 
-func (c *Client) InsertOne(doc interface{}) (interface{}, error) {
+func (c *Client) InsertOne(doc any) (any, error) {
 	if doc == nil {
 		return "", mongodb.ErrNilDocument
 	}
@@ -77,7 +77,7 @@ func (c *Client) InsertOne(doc interface{}) (interface{}, error) {
 	return res.InsertedID, nil
 }
 
-func (c *Client) InsertMany(docs []interface{}) ([]interface{}, error) {
+func (c *Client) InsertMany(docs []any) ([]any, error) {
 	if docs == nil {
 		return nil, mongodb.ErrNilDocument
 	}
@@ -90,7 +90,7 @@ func (c *Client) InsertMany(docs []interface{}) ([]interface{}, error) {
 		return nil, err
 	}
 
-	var ids []interface{}
+	var ids []any
 	for _, i := range res.InsertedIDs {
 		if id, ok := i.(primitive.ObjectID); ok {
 			ids = append(ids, objectID(id))
@@ -101,7 +101,7 @@ func (c *Client) InsertMany(docs []interface{}) ([]interface{}, error) {
 	return ids, nil
 }
 
-func (c *Client) UpdateOne(filter, update interface{}, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
+func (c *Client) UpdateOne(filter, update any, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
 	if filter == nil || update == nil {
 		return nil, mongodb.ErrNilDocument
 	}
@@ -125,7 +125,7 @@ func (c *Client) UpdateOne(filter, update interface{}, opt *mongodb.UpdateOpt) (
 	return (*mongodb.UpdateResult)(res), nil
 }
 
-func (c *Client) UpdateMany(filter, update interface{}, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
+func (c *Client) UpdateMany(filter, update any, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
 	if filter == nil || update == nil {
 		return nil, mongodb.ErrNilDocument
 	}
@@ -149,7 +149,7 @@ func (c *Client) UpdateMany(filter, update interface{}, opt *mongodb.UpdateOpt) 
 	return (*mongodb.UpdateResult)(res), nil
 }
 
-func (c *Client) ReplaceOne(filter, replacement interface{}, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
+func (c *Client) ReplaceOne(filter, replacement any, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
 	if filter == nil || replacement == nil {
 		return nil, mongodb.ErrNilDocument
 	}
@@ -173,7 +173,7 @@ func (c *Client) ReplaceOne(filter, replacement interface{}, opt *mongodb.Update
 	return (*mongodb.UpdateResult)(res), nil
 }
 
-func (c *Client) DeleteOne(filter interface{}) (int64, error) {
+func (c *Client) DeleteOne(filter any) (int64, error) {
 	if filter == nil {
 		return 0, mongodb.ErrNilDocument
 	}
@@ -188,7 +188,7 @@ func (c *Client) DeleteOne(filter interface{}) (int64, error) {
 	return res.DeletedCount, nil
 }
 
-func (c *Client) DeleteMany(filter interface{}) (int64, error) {
+func (c *Client) DeleteMany(filter any) (int64, error) {
 	if filter == nil {
 		return 0, mongodb.ErrNilDocument
 	}
@@ -203,7 +203,7 @@ func (c *Client) DeleteMany(filter interface{}) (int64, error) {
 	return res.DeletedCount, nil
 }
 
-func (c *Client) Aggregate(pipeline, data interface{}) error {
+func (c *Client) Aggregate(pipeline, data any) error {
 	if pipeline == nil {
 		return mongodb.ErrNilDocument
 	}
@@ -221,7 +221,7 @@ func (c *Client) Aggregate(pipeline, data interface{}) error {
 	return cur.All(ctx, data)
 }
 
-func (c *Client) CountDocuments(filter interface{}, opt *mongodb.CountOpt) (int64, error) {
+func (c *Client) CountDocuments(filter any, opt *mongodb.CountOpt) (int64, error) {
 	if filter == nil {
 		filter = mongodb.M{}
 	}
@@ -238,7 +238,7 @@ func (c *Client) CountDocuments(filter interface{}, opt *mongodb.CountOpt) (int6
 	return c.coll.CountDocuments(ctx, filter, option)
 }
 
-func (c *Client) FindOneAndDelete(filter interface{}, opt *mongodb.FindOneOpt, data interface{}) error {
+func (c *Client) FindOneAndDelete(filter any, opt *mongodb.FindOneOpt, data any) error {
 	if filter == nil {
 		return mongodb.ErrNilDocument
 	}
@@ -262,7 +262,7 @@ func (c *Client) FindOneAndDelete(filter interface{}, opt *mongodb.FindOneOpt, d
 	return err
 }
 
-func (c *Client) FindOneAndReplace(filter, replacement interface{}, opt *mongodb.FindAndUpdateOpt, data interface{}) error {
+func (c *Client) FindOneAndReplace(filter, replacement any, opt *mongodb.FindAndUpdateOpt, data any) error {
 	if filter == nil || replacement == nil {
 		return mongodb.ErrNilDocument
 	}
@@ -287,7 +287,7 @@ func (c *Client) FindOneAndReplace(filter, replacement interface{}, opt *mongodb
 	return err
 }
 
-func (c *Client) FindOneAndUpdate(filter, update interface{}, opt *mongodb.FindAndUpdateOpt, data interface{}) error {
+func (c *Client) FindOneAndUpdate(filter, update any, opt *mongodb.FindAndUpdateOpt, data any) error {
 	if filter == nil || update == nil {
 		return mongodb.ErrNilDocument
 	}
