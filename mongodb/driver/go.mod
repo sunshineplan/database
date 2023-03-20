@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/sunshineplan/database/mongodb v1.0.5
-	go.mongodb.org/mongo-driver v1.11.2
+	go.mongodb.org/mongo-driver v1.11.3
 )
 
 require (
