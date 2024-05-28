@@ -3,7 +3,7 @@ module github.com/sunshineplan/database/mongodb/driver
 go 1.18
 
 require (
-	github.com/sunshineplan/database/mongodb v1.0.5
+	github.com/sunshineplan/database/mongodb v1.0.6
 	go.mongodb.org/mongo-driver v1.15.0
 )
 
