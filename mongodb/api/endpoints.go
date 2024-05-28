@@ -2,13 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/sunshineplan/database/mongodb"
 )
 
 func (c *Client) FindOne(filter any, opt *mongodb.FindOneOpt, data any) error {
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer || rv.IsNil() {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	option := findOneOpt{Filter: filter}
@@ -28,8 +29,8 @@ func (c *Client) FindOne(filter any, opt *mongodb.FindOneOpt, data any) error {
 }
 
 func (c *Client) Find(filter any, opt *mongodb.FindOpt, data any) error {
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer || rv.IsNil() {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	option := findOpt{Filter: filter}
@@ -182,8 +183,8 @@ func (c *Client) Aggregate(pipeline, data any) error {
 	if pipeline == nil {
 		return mongodb.ErrNilDocument
 	}
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer || rv.IsNil() {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	var res documents

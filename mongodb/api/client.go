@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/sunshineplan/database/mongodb"
@@ -90,6 +91,10 @@ func (c *Client) body(data any) (io.Reader, error) {
 }
 
 func (c *Client) Request(endpoint string, action, data any) error {
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
+	}
+
 	if err := c.Connect(); err != nil {
 		return err
 	}
@@ -99,7 +104,10 @@ func (c *Client) Request(endpoint string, action, data any) error {
 		return err
 	}
 
-	req, err := http.NewRequest(
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(
+		ctx,
 		"POST",
 		fmt.Sprintf(base, c.AppID, c.Version)+endpoint,
 		body,
@@ -110,19 +118,9 @@ func (c *Client) Request(endpoint string, action, data any) error {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("api-key", c.Key)
 
-	var resp *http.Response
-	ch := make(chan error, 1)
-	go func() {
-		resp, err = defaultHTTPClient.Do(req)
-		ch <- err
-	}()
-	select {
-	case <-time.After(defaultTimeout):
-		return context.DeadlineExceeded
-	case err := <-ch:
-		if err != nil {
-			return err
-		}
+	resp, err := defaultHTTPClient.Do(req)
+	if err != nil {
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -141,10 +139,5 @@ func (c *Client) Request(endpoint string, action, data any) error {
 		return fmt.Errorf("unknown status code: %d", resp.StatusCode)
 	}
 
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(b, data)
+	return json.NewDecoder(resp.Body).Decode(data)
 }

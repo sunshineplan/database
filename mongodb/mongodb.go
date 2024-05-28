@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"errors"
+	"reflect"
 	"time"
 )
 
@@ -76,7 +77,20 @@ type Client interface {
 }
 
 var (
-	ErrNilDocument = errors.New("document is nil")
+	ErrNilDocument = errors.New("mongo: document is nil")
 	ErrNoDocuments = errors.New("mongo: no documents in result")
-	ErrDecodeToNil = errors.New("cannot Decode to nil value")
 )
+
+type InvalidDecodeError struct {
+	Type reflect.Type
+}
+
+func (e *InvalidDecodeError) Error() string {
+	if e.Type == nil {
+		return "mongo: Decode(nil)"
+	}
+	if e.Type.Kind() != reflect.Pointer {
+		return "mongo: Decode(non-pointer " + e.Type.String() + ")"
+	}
+	return "mongo: Decode(nil " + e.Type.String() + ")"
+}
