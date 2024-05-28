@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/sunshineplan/database/mongodb"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -13,8 +14,8 @@ func (c *Client) FindOne(filter any, opt *mongodb.FindOneOpt, data any) error {
 	if filter == nil {
 		filter = mongodb.M{}
 	}
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	option := options.FindOne()
@@ -37,8 +38,8 @@ func (c *Client) Find(filter any, opt *mongodb.FindOpt, data any) error {
 	if filter == nil {
 		filter = mongodb.M{}
 	}
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	option := options.Find()
@@ -207,8 +208,8 @@ func (c *Client) Aggregate(pipeline, data any) error {
 	if pipeline == nil {
 		return mongodb.ErrNilDocument
 	}
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
@@ -242,8 +243,8 @@ func (c *Client) FindOneAndDelete(filter any, opt *mongodb.FindOneOpt, data any)
 	if filter == nil {
 		return mongodb.ErrNilDocument
 	}
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	option := options.FindOneAndDelete()
@@ -266,8 +267,8 @@ func (c *Client) FindOneAndReplace(filter, replacement any, opt *mongodb.FindAnd
 	if filter == nil || replacement == nil {
 		return mongodb.ErrNilDocument
 	}
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	option := options.FindOneAndReplace()
@@ -291,8 +292,8 @@ func (c *Client) FindOneAndUpdate(filter, update any, opt *mongodb.FindAndUpdate
 	if filter == nil || update == nil {
 		return mongodb.ErrNilDocument
 	}
-	if data == nil {
-		return mongodb.ErrDecodeToNil
+	if rv := reflect.ValueOf(data); rv.Kind() != reflect.Pointer {
+		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
 	option := options.FindOneAndUpdate()
