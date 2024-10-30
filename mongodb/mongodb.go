@@ -39,6 +39,7 @@ type (
 		ModifiedCount int64
 		UpsertedCount int64
 		UpsertedID    any
+		Acknowledged  bool
 	}
 )
 
@@ -60,7 +61,7 @@ type Client interface {
 	FindOne(filter any, opt *FindOneOpt, data any) error
 	Find(filter any, opt *FindOpt, data any) error
 	InsertOne(doc any) (id any, err error)
-	InsertMany(docs []any) (ids []any, err error)
+	InsertMany(docs any) (ids []any, err error)
 	UpdateOne(filter, update any, opt *UpdateOpt) (*UpdateResult, error)
 	UpdateMany(filter, update any, opt *UpdateOpt) (*UpdateResult, error)
 	ReplaceOne(filter, replacement any, opt *UpdateOpt) (*UpdateResult, error)

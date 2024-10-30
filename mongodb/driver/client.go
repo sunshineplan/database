@@ -9,14 +9,14 @@ import (
 	"time"
 
 	"github.com/sunshineplan/database/mongodb"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
 var _ mongodb.Client = &Client{}
 
-var defaultTimeout = time.Minute
+var DefaultTimeout = time.Minute
 
 // Client contains mongodb basic configure.
 type Client struct {
@@ -28,12 +28,21 @@ type Client struct {
 	Password   string
 	SRV        bool
 
-	client *mongo.Client
-	coll   *mongo.Collection
+	timeout time.Duration
+	client  *mongo.Client
+	coll    *mongo.Collection
+}
+
+func (c *Client) context() (context.Context, context.CancelFunc) {
+	d := c.timeout
+	if d == 0 {
+		d = DefaultTimeout
+	}
+	return context.WithTimeout(context.Background(), d)
 }
 
 func (c *Client) SetTimeout(d time.Duration) {
-	defaultTimeout = d
+	c.timeout = d
 }
 
 // URI returns mongodb uri connection string
@@ -64,13 +73,13 @@ func (c *Client) MongoClient() (*mongo.Client, error) {
 		return c.client, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
-	defer cancel()
-
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(c.URI()))
+	client, err := mongo.Connect(options.Client().ApplyURI(c.URI()))
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := c.context()
+	defer cancel()
 
 	err = client.Ping(ctx, readpref.Primary())
 	if err != nil {
@@ -104,7 +113,7 @@ func (c *Client) Connect() error {
 
 func (c *Client) Close() error {
 	if c.client != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+		ctx, cancel := c.context()
 		defer func() {
 			cancel()
 			c.client = nil

@@ -1,13 +1,12 @@
 package driver
 
 import (
-	"context"
 	"reflect"
 
 	"github.com/sunshineplan/database/mongodb"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func (c *Client) FindOne(filter any, opt *mongodb.FindOneOpt, data any) error {
@@ -20,10 +19,10 @@ func (c *Client) FindOne(filter any, opt *mongodb.FindOneOpt, data any) error {
 
 	option := options.FindOne()
 	if opt != nil {
-		option.Projection = opt.Projection
+		option.SetProjection(opt.Projection)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	err := c.coll.FindOne(ctx, filter, option).Decode(data)
@@ -44,13 +43,13 @@ func (c *Client) Find(filter any, opt *mongodb.FindOpt, data any) error {
 
 	option := options.Find()
 	if opt != nil {
-		option.Projection = opt.Projection
-		option.Sort = opt.Sort
-		option.Limit = &opt.Limit
-		option.Skip = &opt.Skip
+		option.SetProjection(opt.Projection)
+		option.SetSort(opt.Sort)
+		option.SetLimit(opt.Limit)
+		option.SetSkip(opt.Skip)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	cur, err := c.coll.Find(ctx, filter, option)
@@ -65,25 +64,25 @@ func (c *Client) InsertOne(doc any) (any, error) {
 		return "", mongodb.ErrNilDocument
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	res, err := c.coll.InsertOne(ctx, doc)
 	if err != nil {
 		return "", err
 	}
-	if id, ok := res.InsertedID.(primitive.ObjectID); ok {
+	if id, ok := res.InsertedID.(bson.ObjectID); ok {
 		return objectID(id), nil
 	}
 	return res.InsertedID, nil
 }
 
-func (c *Client) InsertMany(docs []any) ([]any, error) {
+func (c *Client) InsertMany(docs any) ([]any, error) {
 	if docs == nil {
 		return nil, mongodb.ErrNilDocument
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	res, err := c.coll.InsertMany(ctx, docs)
@@ -93,7 +92,7 @@ func (c *Client) InsertMany(docs []any) ([]any, error) {
 
 	var ids []any
 	for _, i := range res.InsertedIDs {
-		if id, ok := i.(primitive.ObjectID); ok {
+		if id, ok := i.(bson.ObjectID); ok {
 			ids = append(ids, objectID(id))
 		} else {
 			ids = append(ids, i)
@@ -109,17 +108,17 @@ func (c *Client) UpdateOne(filter, update any, opt *mongodb.UpdateOpt) (*mongodb
 
 	option := options.Update()
 	if opt != nil {
-		option.Upsert = &opt.Upsert
+		option.SetUpsert(opt.Upsert)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	res, err := c.coll.UpdateOne(ctx, filter, update, option)
 	if err != nil {
 		return nil, err
 	}
-	if id, ok := res.UpsertedID.(primitive.ObjectID); ok {
+	if id, ok := res.UpsertedID.(bson.ObjectID); ok {
 		res.UpsertedID = objectID(id)
 	}
 
@@ -133,17 +132,17 @@ func (c *Client) UpdateMany(filter, update any, opt *mongodb.UpdateOpt) (*mongod
 
 	option := options.Update()
 	if opt != nil {
-		option.Upsert = &opt.Upsert
+		option.SetUpsert(opt.Upsert)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	res, err := c.coll.UpdateMany(ctx, filter, update, option)
 	if err != nil {
 		return nil, err
 	}
-	if id, ok := res.UpsertedID.(primitive.ObjectID); ok {
+	if id, ok := res.UpsertedID.(bson.ObjectID); ok {
 		res.UpsertedID = objectID(id)
 	}
 
@@ -157,17 +156,17 @@ func (c *Client) ReplaceOne(filter, replacement any, opt *mongodb.UpdateOpt) (*m
 
 	option := options.Replace()
 	if opt != nil {
-		option.Upsert = &opt.Upsert
+		option.SetUpsert(opt.Upsert)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	res, err := c.coll.ReplaceOne(ctx, filter, replacement, option)
 	if err != nil {
 		return nil, err
 	}
-	if id, ok := res.UpsertedID.(primitive.ObjectID); ok {
+	if id, ok := res.UpsertedID.(bson.ObjectID); ok {
 		res.UpsertedID = objectID(id)
 	}
 
@@ -179,7 +178,7 @@ func (c *Client) DeleteOne(filter any) (int64, error) {
 		return 0, mongodb.ErrNilDocument
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	res, err := c.coll.DeleteOne(ctx, filter)
@@ -194,7 +193,7 @@ func (c *Client) DeleteMany(filter any) (int64, error) {
 		return 0, mongodb.ErrNilDocument
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	res, err := c.coll.DeleteMany(ctx, filter)
@@ -212,7 +211,7 @@ func (c *Client) Aggregate(pipeline, data any) error {
 		return &mongodb.InvalidDecodeError{Type: reflect.TypeOf(data)}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	cur, err := c.coll.Aggregate(ctx, pipeline)
@@ -229,11 +228,11 @@ func (c *Client) CountDocuments(filter any, opt *mongodb.CountOpt) (int64, error
 
 	option := options.Count()
 	if opt != nil {
-		option.Limit = &opt.Limit
-		option.Skip = &opt.Skip
+		option.SetLimit(opt.Limit)
+		option.SetSkip(opt.Skip)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	return c.coll.CountDocuments(ctx, filter, option)
@@ -249,10 +248,10 @@ func (c *Client) FindOneAndDelete(filter any, opt *mongodb.FindOneOpt, data any)
 
 	option := options.FindOneAndDelete()
 	if opt != nil {
-		option.Projection = opt.Projection
+		option.SetProjection(opt.Projection)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	err := c.coll.FindOneAndDelete(ctx, filter, option).Decode(data)
@@ -273,11 +272,11 @@ func (c *Client) FindOneAndReplace(filter, replacement any, opt *mongodb.FindAnd
 
 	option := options.FindOneAndReplace()
 	if opt != nil {
-		option.Projection = opt.Projection
-		option.Upsert = &opt.Upsert
+		option.SetProjection(opt.Projection)
+		option.SetUpsert(opt.Upsert)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	err := c.coll.FindOneAndReplace(ctx, filter, replacement, option).Decode(data)
@@ -298,11 +297,11 @@ func (c *Client) FindOneAndUpdate(filter, update any, opt *mongodb.FindAndUpdate
 
 	option := options.FindOneAndUpdate()
 	if opt != nil {
-		option.Projection = opt.Projection
-		option.Upsert = &opt.Upsert
+		option.SetProjection(opt.Projection)
+		option.SetUpsert(opt.Upsert)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	ctx, cancel := c.context()
 	defer cancel()
 
 	err := c.coll.FindOneAndUpdate(ctx, filter, update, option).Decode(data)

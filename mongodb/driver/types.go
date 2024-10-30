@@ -4,26 +4,26 @@ import (
 	"time"
 
 	"github.com/sunshineplan/database/mongodb"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 var (
-	_ mongodb.ObjectID = objectID(primitive.NilObjectID)
+	_ mongodb.ObjectID = objectID(bson.NilObjectID)
 	_ mongodb.Date     = date(time.Time{})
 )
 
-type objectID primitive.ObjectID
+type objectID bson.ObjectID
 
 func (id objectID) Hex() string {
-	return primitive.ObjectID(id).Hex()
+	return bson.ObjectID(id).Hex()
 }
 
 func (id objectID) Interface() any {
-	return primitive.ObjectID(id)
+	return bson.ObjectID(id)
 }
 
 func (*Client) ObjectID(s string) (mongodb.ObjectID, error) {
-	id, err := primitive.ObjectIDFromHex(s)
+	id, err := bson.ObjectIDFromHex(s)
 	if err != nil {
 		return nil, err
 	}
