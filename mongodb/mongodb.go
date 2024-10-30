@@ -4,9 +4,14 @@ import (
 	"errors"
 	"reflect"
 	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type M map[string]any
+type (
+	M   = bson.M
+	OID = bson.ObjectID
+)
 
 type (
 	FindOneOpt struct {
@@ -45,12 +50,12 @@ type (
 
 type ObjectID interface {
 	Hex() string
-	Interface() any
+	MarshalJSON() ([]byte, error)
 }
 
 type Date interface {
 	Time() time.Time
-	Interface() any
+	MarshalJSON() ([]byte, error)
 }
 
 type Client interface {

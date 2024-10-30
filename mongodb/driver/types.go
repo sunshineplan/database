@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/sunshineplan/database/mongodb"
@@ -8,26 +9,12 @@ import (
 )
 
 var (
-	_ mongodb.ObjectID = objectID(bson.NilObjectID)
+	_ mongodb.ObjectID = bson.NilObjectID
 	_ mongodb.Date     = date(time.Time{})
 )
 
-type objectID bson.ObjectID
-
-func (id objectID) Hex() string {
-	return bson.ObjectID(id).Hex()
-}
-
-func (id objectID) Interface() any {
-	return bson.ObjectID(id)
-}
-
 func (*Client) ObjectID(s string) (mongodb.ObjectID, error) {
-	id, err := bson.ObjectIDFromHex(s)
-	if err != nil {
-		return nil, err
-	}
-	return objectID(id), nil
+	return bson.ObjectIDFromHex(s)
 }
 
 type date time.Time
@@ -36,8 +23,8 @@ func (d date) Time() time.Time {
 	return time.Time(d)
 }
 
-func (d date) Interface() any {
-	return time.Time(d)
+func (d date) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Time(d))
 }
 
 func (*Client) Date(t time.Time) mongodb.Date {
