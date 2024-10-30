@@ -4,7 +4,6 @@ import (
 	"reflect"
 
 	"github.com/sunshineplan/database/mongodb"
-	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -71,9 +70,6 @@ func (c *Client) InsertOne(doc any) (any, error) {
 	if err != nil {
 		return "", err
 	}
-	if id, ok := res.InsertedID.(bson.ObjectID); ok {
-		return objectID(id), nil
-	}
 	return res.InsertedID, nil
 }
 
@@ -89,16 +85,7 @@ func (c *Client) InsertMany(docs any) ([]any, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	var ids []any
-	for _, i := range res.InsertedIDs {
-		if id, ok := i.(bson.ObjectID); ok {
-			ids = append(ids, objectID(id))
-		} else {
-			ids = append(ids, i)
-		}
-	}
-	return ids, nil
+	return res.InsertedIDs, nil
 }
 
 func (c *Client) UpdateOne(filter, update any, opt *mongodb.UpdateOpt) (*mongodb.UpdateResult, error) {
@@ -118,10 +105,6 @@ func (c *Client) UpdateOne(filter, update any, opt *mongodb.UpdateOpt) (*mongodb
 	if err != nil {
 		return nil, err
 	}
-	if id, ok := res.UpsertedID.(bson.ObjectID); ok {
-		res.UpsertedID = objectID(id)
-	}
-
 	return (*mongodb.UpdateResult)(res), nil
 }
 
@@ -142,10 +125,6 @@ func (c *Client) UpdateMany(filter, update any, opt *mongodb.UpdateOpt) (*mongod
 	if err != nil {
 		return nil, err
 	}
-	if id, ok := res.UpsertedID.(bson.ObjectID); ok {
-		res.UpsertedID = objectID(id)
-	}
-
 	return (*mongodb.UpdateResult)(res), nil
 }
 
@@ -166,10 +145,6 @@ func (c *Client) ReplaceOne(filter, replacement any, opt *mongodb.UpdateOpt) (*m
 	if err != nil {
 		return nil, err
 	}
-	if id, ok := res.UpsertedID.(bson.ObjectID); ok {
-		res.UpsertedID = objectID(id)
-	}
-
 	return (*mongodb.UpdateResult)(res), nil
 }
 
