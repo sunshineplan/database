@@ -13,6 +13,8 @@ type (
 	OID = bson.ObjectID
 )
 
+func OIDFromHex(s string) (OID, error) { return bson.ObjectIDFromHex(s) }
+
 type (
 	FindOneOpt struct {
 		Projection any
