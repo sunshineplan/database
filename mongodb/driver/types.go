@@ -23,8 +23,12 @@ func (*Client) ObjectID(s string) (mongodb.ObjectID, error) {
 
 type objectID struct{ bson.ObjectID }
 
-func (oid objectID) MarshalBSON() ([]byte, error) {
-	return oid.MarshalJSON()
+func (oid objectID) MarshalBSONValue() (typ byte, data []byte, err error) {
+	b, err := oid.MarshalJSON()
+	if err != nil {
+		return
+	}
+	return byte(bson.TypeObjectID), b, nil
 }
 
 type date time.Time
@@ -37,8 +41,12 @@ func (d date) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(d))
 }
 
-func (d date) MarshalBSON() ([]byte, error) {
-	return d.MarshalJSON()
+func (d date) MarshalBSONValue() (typ byte, data []byte, err error) {
+	b, err := d.MarshalJSON()
+	if err != nil {
+		return
+	}
+	return byte(bson.TypeDateTime), b, nil
 }
 
 func (*Client) Date(t time.Time) mongodb.Date {
