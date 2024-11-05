@@ -9,12 +9,22 @@ import (
 )
 
 var (
-	_ mongodb.ObjectID = bson.NilObjectID
+	_ mongodb.ObjectID = objectID{bson.NilObjectID}
 	_ mongodb.Date     = date(time.Time{})
 )
 
 func (*Client) ObjectID(s string) (mongodb.ObjectID, error) {
-	return bson.ObjectIDFromHex(s)
+	oid, err := bson.ObjectIDFromHex(s)
+	if err != nil {
+		return nil, err
+	}
+	return objectID{oid}, nil
+}
+
+type objectID struct{ bson.ObjectID }
+
+func (oid objectID) MarshalBSON() ([]byte, error) {
+	return oid.MarshalJSON()
 }
 
 type date time.Time
@@ -25,6 +35,10 @@ func (d date) Time() time.Time {
 
 func (d date) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(d))
+}
+
+func (d date) MarshalBSON() ([]byte, error) {
+	return d.MarshalJSON()
 }
 
 func (*Client) Date(t time.Time) mongodb.Date {

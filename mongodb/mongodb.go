@@ -53,11 +53,13 @@ type (
 type ObjectID interface {
 	Hex() string
 	MarshalJSON() ([]byte, error)
+	MarshalBSON() ([]byte, error)
 }
 
 type Date interface {
 	Time() time.Time
 	MarshalJSON() ([]byte, error)
+	MarshalBSON() ([]byte, error)
 }
 
 type Client interface {
