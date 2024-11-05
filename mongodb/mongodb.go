@@ -52,14 +52,10 @@ type (
 
 type ObjectID interface {
 	Hex() string
-	MarshalJSON() ([]byte, error)
-	MarshalBSONValue() (typ byte, data []byte, err error)
 }
 
-type Date interface {
+type Time interface {
 	Time() time.Time
-	MarshalJSON() ([]byte, error)
-	MarshalBSONValue() (typ byte, data []byte, err error)
 }
 
 type Client interface {
@@ -83,7 +79,7 @@ type Client interface {
 	FindOneAndUpdate(filter, update any, opt *FindAndUpdateOpt, data any) error
 
 	ObjectID(string) (ObjectID, error)
-	Date(time.Time) Date
+	Time(time.Time) Time
 }
 
 var (
