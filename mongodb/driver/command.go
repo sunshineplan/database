@@ -93,7 +93,7 @@ func (c *Client) UpdateOne(filter, update any, opt *mongodb.UpdateOpt) (*mongodb
 		return nil, mongodb.ErrNilDocument
 	}
 
-	option := options.Update()
+	option := options.UpdateOne()
 	if opt != nil {
 		option.SetUpsert(opt.Upsert)
 	}
@@ -113,7 +113,7 @@ func (c *Client) UpdateMany(filter, update any, opt *mongodb.UpdateOpt) (*mongod
 		return nil, mongodb.ErrNilDocument
 	}
 
-	option := options.Update()
+	option := options.UpdateMany()
 	if opt != nil {
 		option.SetUpsert(opt.Upsert)
 	}
