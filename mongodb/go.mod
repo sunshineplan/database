@@ -2,7 +2,7 @@ module github.com/sunshineplan/database/mongodb
 
 go 1.22
 
-require go.mongodb.org/mongo-driver/v2 v2.0.0
+require go.mongodb.org/mongo-driver/v2 v2.0.1
 
 require (
 	github.com/golang/snappy v0.0.4 // indirect
