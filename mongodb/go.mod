@@ -1,7 +1,6 @@
 module github.com/sunshineplan/database/mongodb
 
-go 1.22
-toolchain go1.24.1
+go 1.24
 
 require go.mongodb.org/mongo-driver/v2 v2.2.0
 
